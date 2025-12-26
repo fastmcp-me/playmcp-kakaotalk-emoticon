@@ -83,6 +83,34 @@ python server.py
 uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
+## Railway 배포
+
+### 1. Railway 프로젝트 생성
+1. [Railway](https://railway.app)에 로그인
+2. "New Project" 클릭
+3. "Deploy from GitHub repo" 선택
+4. 이 레포지토리 선택
+
+### 2. 환경 변수 설정
+Railway 대시보드에서 Variables 탭에 다음 환경변수 추가:
+
+| 변수명 | 설명 | 필수 |
+|---------|------|------|
+| `HF_TOKEN` | Hugging Face API 토큰 | ✅ |
+| `BASE_URL` | 배포된 서버 URL (Railway가 자동 생성) | ❌ |
+
+> **참고**: `PORT`는 Railway가 자동으로 설정합니다.
+
+### 3. 배포 확인
+- Railway가 자동으로 빌드 및 배포
+- 제공된 URL로 접속하여 확인: `https://your-app.up.railway.app/health`
+
+### 4. PlayMCP 등록
+배포 후 MCP 엔드포인트 URL을 PlayMCP에 등록:
+```
+https://your-app.up.railway.app/mcp
+```
+
 ## PlayMCP 등록
 
 1. [PlayMCP](https://playmcp.kakao.com)에 카카오 계정으로 로그인

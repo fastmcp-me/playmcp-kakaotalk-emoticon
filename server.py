@@ -211,6 +211,28 @@ from fastapi.responses import HTMLResponse
 app = FastAPI(title="카카오 이모티콘 MCP 서버")
 
 
+@app.get("/health")
+async def health_check():
+    """헬스체크 엔드포인트 (Railway 배포용)"""
+    return {"status": "healthy", "service": "kakao-emoticon-mcp"}
+
+
+@app.get("/")
+async def root():
+    """루트 엔드포인트"""
+    return {
+        "name": "kakao-emoticon-mcp",
+        "description": "카카오톡 이모티콘 제작 자동화 MCP 서버",
+        "version": "1.0.0",
+        "endpoints": {
+            "mcp": "/mcp",
+            "health": "/health",
+            "preview": "/preview/{preview_id}",
+            "download": "/download/{download_id}"
+        }
+    }
+
+
 @app.get("/preview/{preview_id}", response_class=HTMLResponse)
 async def get_preview(preview_id: str):
     """프리뷰 페이지 반환"""
