@@ -6,11 +6,12 @@ PlayMCP에서 호스팅되며, 허깅페이스 계정 연동을 통해 이미지
 """
 import os
 from typing import List, Optional
-from contextlib import asynccontextmanager
+
 
 # FastAPI 관련 임포트만 최상위에 유지 (빠른 헬스체크를 위해)
 from fastapi import FastAPI, Response
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 
 # MCP 서버와 관련 모듈들을 지연 로딩
@@ -39,45 +40,20 @@ def _get_mcp():
     return _mcp
 
 
-# MCP 초기화 상태 추적
-_mcp_initialized = False
-_init_task = None
 
 
-async def _init_mcp_background():
-    """MCP 서버를 백그라운드에서 초기화"""
-    import asyncio
-    global _mcp_initialized
-    try:
-        # 서버가 완전히 시작된 후 초기화 (헬스체크가 먼저 응답할 수 있도록)
-        await asyncio.sleep(0.5)
-        mcp = _get_mcp()
-        app.mount("/mcp", mcp.sse_app())
-        _mcp_initialized = True
-        print("MCP server initialized successfully")
-    except Exception as e:
-        print(f"Warning: MCP initialization failed: {e}")
 
+# FastAPI 앱 생성
+app = FastAPI(title="카카오 이모티콘 MCP 서버")
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """앱 생명주기 관리"""
-    import asyncio
-    global _init_task
-    
-    # 백그라운드 태스크로 MCP 초기화 시작 (블로킹하지 않음)
-    _init_task = asyncio.create_task(_init_mcp_background())
-    
-    yield
-    
-    # 종료 시 태스크 정리
-    if _init_task and not _init_task.done():
-        _init_task.cancel()
-
-
-# FastAPI 앱을 먼저 생성 (헬스체크가 즉시 응답할 수 있도록)
-app = FastAPI(title="카카오 이모티콘 MCP 서버", lifespan=lifespan)
-
+# CORS 설정 추가 (외부 MCP 클라이언트 접근 허용)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health")
 async def health_check():
@@ -93,7 +69,7 @@ async def root():
         "description": "카카오톡 이모티콘 제작 자동화 MCP 서버",
         "version": "1.0.0",
         "endpoints": {
-            "mcp": "/mcp",
+            "mcp_sse": "/sse",
             "health": "/health",
             "preview": "/preview/{preview_id}",
             "download": "/download/{download_id}"
@@ -323,6 +299,12 @@ async def get_download(download_id: str):
             headers={"Content-Disposition": "attachment; filename=emoticons.zip"}
         )
     return Response(content="Download not found", status_code=404)
+
+
+# MCP SSE 앱을 루트에 마운트 (모든 명시적 라우트 정의 후에 마운트해야 함)
+# /sse와 /messages/ 경로가 MCP 프로토콜에 맞게 작동함
+app.mount("/", _get_mcp().sse_app())
+print("MCP server initialized - SSE endpoint available at: /sse")
 
 
 if __name__ == "__main__":
