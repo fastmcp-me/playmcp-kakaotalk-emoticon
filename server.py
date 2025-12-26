@@ -52,7 +52,7 @@ async def _init_mcp_background():
         # 서버가 완전히 시작된 후 초기화 (헬스체크가 먼저 응답할 수 있도록)
         await asyncio.sleep(0.5)
         mcp = _get_mcp()
-        app.mount("/mcp", mcp.http_app())
+        app.mount("/mcp", mcp.sse_app())
         _mcp_initialized = True
         print("MCP server initialized successfully")
     except Exception as e:

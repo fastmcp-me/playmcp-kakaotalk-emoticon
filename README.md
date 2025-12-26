@@ -103,12 +103,12 @@ Railway 대시보드에서 Variables 탭에 다음 환경변수 추가:
 
 ### 3. 배포 확인
 - Railway가 자동으로 빌드 및 배포
-- 제공된 URL로 접속하여 확인: `https://your-app.up.railway.app/health`
+- 제공된 URL로 접속하여 확인: `playmcp-kakaotalk-emoticon.bloupla.net/health`
 
 ### 4. PlayMCP 등록
 배포 후 MCP 엔드포인트 URL을 PlayMCP에 등록:
 ```
-https://your-app.up.railway.app/mcp
+playmcp-kakaotalk-emoticon.bloupla.net/mcp
 ```
 
 ## PlayMCP 등록
