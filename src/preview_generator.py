@@ -1,7 +1,8 @@
 """
 프리뷰 페이지 생성 모듈
 """
-import uuid
+import secrets
+import string
 import base64
 import zipfile
 import io
@@ -440,6 +441,19 @@ class PreviewGenerator:
         self._storage: Dict[str, str] = {}  # preview_id -> HTML content
         self._zip_storage: Dict[str, bytes] = {}  # download_id -> ZIP bytes
     
+    def _generate_short_id(self, length: int = 8) -> str:
+        """
+        짧은 랜덤 ID 생성
+        
+        Args:
+            length: ID 길이 (기본값: 8)
+            
+        Returns:
+            영문+숫자로 구성된 랜덤 문자열
+        """
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(length))
+    
     def generate_before_preview(
         self,
         emoticon_type: EmoticonType | str,
@@ -471,7 +485,7 @@ class PreviewGenerator:
             spec=spec
         )
         
-        preview_id = str(uuid.uuid4())
+        preview_id = self._generate_short_id()
         self._storage[preview_id] = html_content
         
         if self.base_url:
@@ -505,7 +519,7 @@ class PreviewGenerator:
         emoticon_type_name = EMOTICON_TYPE_NAMES[type_key]
         
         # ZIP 파일 생성
-        download_id = str(uuid.uuid4())
+        download_id = self._generate_short_id()
         zip_bytes = self._create_zip(emoticons, icon, spec.format.lower())
         self._zip_storage[download_id] = zip_bytes
         
@@ -525,7 +539,7 @@ class PreviewGenerator:
             download_url=download_url
         )
         
-        preview_id = str(uuid.uuid4())
+        preview_id = self._generate_short_id()
         self._storage[preview_id] = html_content
         
         if self.base_url:
