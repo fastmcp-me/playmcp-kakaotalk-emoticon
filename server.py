@@ -48,7 +48,7 @@ async def mcp_metadata():
             "title": "카카오 이모티콘 MCP 서버",
             "version": "1.0.0"
         },
-        "description": "카카오톡 이모티콘 제작 자동화 MCP 서버. 이모티콘 기획 프리뷰, AI 이미지 생성, 완성본 프리뷰, 사양 검사 기능을 제공합니다.",
+        "description": "카카오톡 이모티콘 제작 자동화 MCP 서버. 이모티콘 계획, 제작, 검증을 자동으로 수행합니다.",
         "transport": {
             "type": "streamable-http",
             "endpoint": "/"
@@ -61,7 +61,7 @@ async def mcp_metadata():
         "tools": [
             {
                 "name": "before_preview_tool",
-                "description": "이모티콘 제작 이전 프리뷰. 카카오톡 채팅방과 같은 디자인의 페이지에서 이모티콘 탭 부분에 이모티콘 설명이 글자로 표시되는 프리뷰 페이지 URL을 반환합니다."
+                "description": "이모티콘 제작 이전 프리뷰. 카카오톡 채팅방과 같은 디자인의 페이지에서 제작할 이모티콘의 계획을 테스트 해 볼 수 있습니다."
             },
             {
                 "name": "generate_tool",
@@ -69,7 +69,7 @@ async def mcp_metadata():
             },
             {
                 "name": "after_preview_tool",
-                "description": "완성본 프리뷰. 실제 이모티콘 이미지가 포함된 카카오톡 스타일 프리뷰 페이지를 생성합니다."
+                "description": "완성본 프리뷰. 완성된 이모티콘을 카카오톡 채팅방과 같은 디자인의 페이지에서 테스트 해 볼 수 있습니다."
             },
             {
                 "name": "check_tool",
