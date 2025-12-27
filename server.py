@@ -17,6 +17,7 @@ from pydantic import Field
 # MCP 관련 전역 변수 (하단에서 초기화)
 _mcp = None
 _mcp_app = None
+_mcp_sse_app = None  # SSE transport용 앱
 _mcp_transport_type = None
 
 
@@ -80,9 +81,19 @@ async def mcp_metadata():
         },
         "description": "카카오톡 이모티콘 제작 자동화 MCP 서버. 사용자가 '이모티콘', '스티커', '카카오톡'을 언급하면 AI가 자동으로 도구를 사용합니다.",
         "instructions": MCP_SERVER_INSTRUCTIONS,
+        "transports": [
+            {
+                "type": "sse",
+                "endpoint": "/sse"
+            },
+            {
+                "type": "streamable-http",
+                "endpoint": "/"
+            }
+        ],
         "transport": {
-            "type": "streamable-http",
-            "endpoint": "/"
+            "type": "sse",
+            "endpoint": "/sse"
         },
         "capabilities": {
             "tools": {"listChanged": False},
@@ -102,6 +113,7 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "mcp": "/",
+            "mcp_sse": "/sse",
             "health": "/health",
             "preview": "/preview/{preview_id}",
             "download": "/download/{download_id}"
@@ -306,7 +318,7 @@ def _get_mcp():
 
 def _init_mcp_app():
     """MCP 앱을 초기화하고 lifespan을 가져옴"""
-    global _mcp_app, _mcp_transport_type, app
+    global _mcp_app, _mcp_sse_app, _mcp_transport_type, app
     
     try:
         import traceback
@@ -314,20 +326,32 @@ def _init_mcp_app():
         mcp_instance = _get_mcp()
         print("MCP instance created, checking available app methods...")
         
+        # SSE transport 먼저 생성 (PlayMCP 호환성을 위해 우선)
+        if hasattr(mcp_instance, 'sse_app'):
+            try:
+                _mcp_sse_app = mcp_instance.sse_app()
+                print("SSE transport app created")
+            except Exception as e:
+                print(f"Warning: SSE app creation failed: {e}")
+                _mcp_sse_app = None
+        
+        # Streamable HTTP transport 생성
         if hasattr(mcp_instance, 'streamable_http_app'):
             try:
                 _mcp_app = mcp_instance.streamable_http_app(path='/')
             except TypeError:
                 _mcp_app = mcp_instance.streamable_http_app()
-            _mcp_transport_type = "Streamable HTTP"
+            _mcp_transport_type = "Streamable HTTP + SSE" if _mcp_sse_app else "Streamable HTTP"
         elif hasattr(mcp_instance, 'http_app'):
             try:
                 _mcp_app = mcp_instance.http_app(path='/')
             except TypeError:
                 _mcp_app = mcp_instance.http_app()
-            _mcp_transport_type = "HTTP"
-        elif hasattr(mcp_instance, 'sse_app'):
-            _mcp_app = mcp_instance.sse_app()
+            _mcp_transport_type = "HTTP + SSE" if _mcp_sse_app else "HTTP"
+        elif _mcp_sse_app:
+            # SSE만 사용 가능한 경우
+            _mcp_app = _mcp_sse_app
+            _mcp_sse_app = None  # 중복 마운트 방지
             _mcp_transport_type = "SSE"
         else:
             raise AttributeError("FastMCP instance has no supported app method")
@@ -361,10 +385,15 @@ def _init_mcp_app():
 # MCP 초기화 실행 (_register_tools가 정의된 후에 실행)
 _init_mcp_app()
 
+# SSE 앱을 /sse에 마운트 (PlayMCP 호환성을 위해 먼저 마운트)
+if _mcp_sse_app is not None:
+    app.mount("/sse", _mcp_sse_app)
+    print("SSE endpoint mounted at /sse")
+
 # MCP 앱을 루트에 마운트 (모든 라우트 정의 후에 마운트해야 기존 엔드포인트가 우선됨)
 if _mcp_app is not None:
     app.mount("/", _mcp_app)
-    print(f"MCP server initialized - {_mcp_transport_type} endpoint available at root")
+    print(f"MCP server initialized - {_mcp_transport_type} endpoint available")
 else:
     print("MCP app not available - server running without MCP support")
 
