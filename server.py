@@ -13,73 +13,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 
-# MCP 서버와 관련 모듈들을 지연 로딩
+# MCP 관련 전역 변수 (하단에서 초기화)
 _mcp = None
-
-
-def _get_mcp():
-    """MCP 서버 인스턴스를 지연 로딩으로 가져옴"""
-    global _mcp
-    
-    if _mcp is not None:
-        return _mcp
-    
-    # 지연 임포트
-    from fastmcp import FastMCP
-    
-    _mcp = FastMCP(
-        name="kakao-emoticon-mcp",
-        instructions="카카오톡 이모티콘 제작 자동화 MCP 서버. "
-                     "이모티콘 기획 프리뷰, AI 이미지 생성, 완성본 프리뷰, 사양 검사 기능을 제공합니다."
-    )
-    
-    # 도구 등록
-    _register_tools(_mcp)
-    
-    return _mcp
-
-
-# MCP 앱을 먼저 초기화하여 lifespan을 가져옴
 _mcp_app = None
 _mcp_transport_type = None
 
-try:
-    import traceback
-    print("Initializing MCP server...")
-    mcp_instance = _get_mcp()
-    print("MCP instance created, checking available app methods...")
-    
-    if hasattr(mcp_instance, 'streamable_http_app'):
-        try:
-            _mcp_app = mcp_instance.streamable_http_app(path='/')
-        except TypeError:
-            _mcp_app = mcp_instance.streamable_http_app()
-        _mcp_transport_type = "Streamable HTTP"
-    elif hasattr(mcp_instance, 'http_app'):
-        try:
-            _mcp_app = mcp_instance.http_app(path='/')
-        except TypeError:
-            _mcp_app = mcp_instance.http_app()
-        _mcp_transport_type = "HTTP"
-    elif hasattr(mcp_instance, 'sse_app'):
-        _mcp_app = mcp_instance.sse_app()
-        _mcp_transport_type = "SSE"
-    else:
-        raise AttributeError("FastMCP instance has no supported app method")
-    
-    print(f"MCP app created - {_mcp_transport_type} transport")
-except Exception as e:
-    print(f"Warning: MCP initialization failed: {e}")
-    traceback.print_exc()
-    print("Server will continue running without MCP support")
-
-# MCP 앱의 lifespan을 사용하여 FastAPI 앱 생성
-if _mcp_app is not None and hasattr(_mcp_app, 'lifespan'):
-    app = FastAPI(title="카카오 이모티콘 MCP 서버", lifespan=_mcp_app.lifespan)
-    print("FastAPI app created with MCP lifespan")
-else:
-    app = FastAPI(title="카카오 이모티콘 MCP 서버")
-    print("FastAPI app created without MCP lifespan")
+# FastAPI 앱 생성 (lifespan은 MCP 초기화 후 설정됨)
+app = FastAPI(title="카카오 이모티콘 MCP 서버")
 
 # CORS 설정 추가 (외부 MCP 클라이언트 접근 허용)
 app.add_middleware(
@@ -89,6 +29,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/health")
 async def health_check():
@@ -158,6 +99,35 @@ async def root():
     }
 
 
+@app.get("/preview/{preview_id}", response_class=HTMLResponse)
+async def get_preview(preview_id: str):
+    """프리뷰 페이지 반환"""
+    from src.preview_generator import get_preview_generator
+    
+    generator = get_preview_generator(os.environ.get("BASE_URL", ""))
+    html = generator.get_preview_html(preview_id)
+    if html:
+        return HTMLResponse(content=html)
+    return HTMLResponse(content="Preview not found", status_code=404)
+
+
+@app.get("/download/{download_id}")
+async def get_download(download_id: str):
+    """ZIP 파일 다운로드"""
+    from src.preview_generator import get_preview_generator
+    
+    generator = get_preview_generator(os.environ.get("BASE_URL", ""))
+    zip_bytes = generator.get_download_zip(download_id)
+    if zip_bytes:
+        return Response(
+            content=zip_bytes,
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=emoticons.zip"}
+        )
+    return Response(content="Download not found", status_code=404)
+
+
+# ===== MCP 도구 등록 함수 (MCP 초기화 전에 정의되어야 함) =====
 def _register_tools(mcp):
     """MCP 도구들을 등록"""
     
@@ -171,23 +141,11 @@ def _register_tools(mcp):
         title: str,
         plans: List[dict]
     ) -> dict:
-        """
-        이모티콘 기획 프리뷰 생성
-        
-        Args:
-            emoticon_type: 이모티콘 타입 (static, dynamic, big, static-mini, dynamic-mini)
-            title: 이모티콘 제목
-            plans: 이모티콘 기획 목록. 각 항목은 {description: 설명, file_type: 파일타입} 형태
-            
-        Returns:
-            프리뷰 URL과 메타데이터
-        """
-        # 지연 임포트
         from src.models import BeforePreviewRequest, EmoticonPlan
         from src.tools import before_preview
         
         request = BeforePreviewRequest(
-            emoticon_type=emoticon_type,  # type: ignore
+            emoticon_type=emoticon_type,
             title=title,
             plans=[EmoticonPlan(**p) for p in plans]
         )
@@ -207,24 +165,11 @@ def _register_tools(mcp):
         character_image: Optional[str] = None,
         hf_token: Optional[str] = None
     ) -> dict:
-        """
-        이모티콘 생성
-        
-        Args:
-            emoticon_type: 이모티콘 타입 (static, dynamic, big, static-mini, dynamic-mini)
-            emoticons: 생성할 이모티콘 목록. 각 항목은 {description: 상세설명, file_extension: 확장자} 형태
-            character_image: 캐릭터 이미지 (base64 또는 URL). 없으면 자동 생성
-            hf_token: 허깅페이스 API 토큰. 없으면 환경변수 HF_TOKEN 사용
-            
-        Returns:
-            생성된 이모티콘 이미지들과 아이콘
-        """
-        # 지연 임포트
         from src.models import GenerateRequest, EmoticonGenerateItem
         from src.tools import generate
         
         request = GenerateRequest(
-            emoticon_type=emoticon_type,  # type: ignore
+            emoticon_type=emoticon_type,
             character_image=character_image,
             emoticons=[EmoticonGenerateItem(**e) for e in emoticons]
         )
@@ -242,24 +187,11 @@ def _register_tools(mcp):
         emoticons: List[dict],
         icon: Optional[str] = None
     ) -> dict:
-        """
-        완성본 프리뷰 생성
-        
-        Args:
-            emoticon_type: 이모티콘 타입 (static, dynamic, big, static-mini, dynamic-mini)
-            title: 이모티콘 제목
-            emoticons: 이모티콘 이미지 목록. 각 항목은 {image_data: base64/URL, frames: [프레임들](선택)} 형태
-            icon: 아이콘 이미지 (base64 또는 URL)
-            
-        Returns:
-            프리뷰 URL과 ZIP 다운로드 URL
-        """
-        # 지연 임포트
         from src.models import AfterPreviewRequest, EmoticonImage
         from src.tools import after_preview
         
         request = AfterPreviewRequest(
-            emoticon_type=emoticon_type,  # type: ignore
+            emoticon_type=emoticon_type,
             title=title,
             emoticons=[EmoticonImage(**e) for e in emoticons],
             icon=icon
@@ -277,23 +209,11 @@ def _register_tools(mcp):
         emoticons: List[dict],
         icon: Optional[dict] = None
     ) -> dict:
-        """
-        이모티콘 사양 검사
-        
-        Args:
-            emoticon_type: 이모티콘 타입 (static, dynamic, big, static-mini, dynamic-mini)
-            emoticons: 검사할 이모티콘 목록. 각 항목은 {file_data: base64, filename: 파일명(선택)} 형태
-            icon: 아이콘 이미지 {file_data: base64, filename: 파일명(선택)}
-            
-        Returns:
-            검사 결과 (통과 여부, 발견된 이슈 목록)
-        """
-        # 지연 임포트
         from src.models import CheckRequest, CheckEmoticonItem
         from src.tools import check
         
         request = CheckRequest(
-            emoticon_type=emoticon_type,  # type: ignore
+            emoticon_type=emoticon_type,
             emoticons=[CheckEmoticonItem(**e) for e in emoticons],
             icon=CheckEmoticonItem(**icon) if icon else None
         )
@@ -307,20 +227,10 @@ def _register_tools(mcp):
     async def get_specs_tool(
         emoticon_type: Optional[str] = None
     ) -> dict:
-        """
-        이모티콘 사양 정보 조회
-        
-        Args:
-            emoticon_type: 조회할 이모티콘 타입. 없으면 모든 타입 정보 반환
-            
-        Returns:
-            이모티콘 사양 정보
-        """
-        # 지연 임포트
         from src.constants import EMOTICON_SPECS, EMOTICON_TYPE_NAMES
         
         if emoticon_type:
-            spec = EMOTICON_SPECS.get(emoticon_type)  # type: ignore
+            spec = EMOTICON_SPECS.get(emoticon_type)
             if spec:
                 return {
                     "type": spec.type,
@@ -335,7 +245,6 @@ def _register_tools(mcp):
                 }
             return {"error": f"Unknown emoticon type: {emoticon_type}"}
         
-        # 모든 타입 정보 반환
         all_specs = {}
         for etype, spec in EMOTICON_SPECS.items():
             all_specs[etype] = {
@@ -352,35 +261,83 @@ def _register_tools(mcp):
         return all_specs
 
 
-@app.get("/preview/{preview_id}", response_class=HTMLResponse)
-async def get_preview(preview_id: str):
-    """프리뷰 페이지 반환"""
-    # 지연 임포트
-    from src.preview_generator import get_preview_generator
+# ===== MCP 초기화 함수들 =====
+def _get_mcp():
+    """MCP 서버 인스턴스를 지연 로딩으로 가져옴"""
+    global _mcp
     
-    generator = get_preview_generator(os.environ.get("BASE_URL", ""))
-    html = generator.get_preview_html(preview_id)
-    if html:
-        return HTMLResponse(content=html)
-    return HTMLResponse(content="Preview not found", status_code=404)
-
-
-@app.get("/download/{download_id}")
-async def get_download(download_id: str):
-    """ZIP 파일 다운로드"""
-    # 지연 임포트
-    from src.preview_generator import get_preview_generator
+    if _mcp is not None:
+        return _mcp
     
-    generator = get_preview_generator(os.environ.get("BASE_URL", ""))
-    zip_bytes = generator.get_download_zip(download_id)
-    if zip_bytes:
-        return Response(
-            content=zip_bytes,
-            media_type="application/zip",
-            headers={"Content-Disposition": "attachment; filename=emoticons.zip"}
-        )
-    return Response(content="Download not found", status_code=404)
+    from fastmcp import FastMCP
+    
+    _mcp = FastMCP(
+        name="kakao-emoticon-mcp",
+        instructions="카카오톡 이모티콘 제작 자동화 MCP 서버. "
+                     "이모티콘 기획 프리뷰, AI 이미지 생성, 완성본 프리뷰, 사양 검사 기능을 제공합니다."
+    )
+    
+    _register_tools(_mcp)
+    
+    return _mcp
 
+
+def _init_mcp_app():
+    """MCP 앱을 초기화하고 lifespan을 가져옴"""
+    global _mcp_app, _mcp_transport_type, app
+    
+    try:
+        import traceback
+        print("Initializing MCP server...")
+        mcp_instance = _get_mcp()
+        print("MCP instance created, checking available app methods...")
+        
+        if hasattr(mcp_instance, 'streamable_http_app'):
+            try:
+                _mcp_app = mcp_instance.streamable_http_app(path='/')
+            except TypeError:
+                _mcp_app = mcp_instance.streamable_http_app()
+            _mcp_transport_type = "Streamable HTTP"
+        elif hasattr(mcp_instance, 'http_app'):
+            try:
+                _mcp_app = mcp_instance.http_app(path='/')
+            except TypeError:
+                _mcp_app = mcp_instance.http_app()
+            _mcp_transport_type = "HTTP"
+        elif hasattr(mcp_instance, 'sse_app'):
+            _mcp_app = mcp_instance.sse_app()
+            _mcp_transport_type = "SSE"
+        else:
+            raise AttributeError("FastMCP instance has no supported app method")
+        
+        print(f"MCP app created - {_mcp_transport_type} transport")
+        
+        # MCP 앱의 lifespan이 있으면 새 FastAPI 앱 생성
+        if hasattr(_mcp_app, 'lifespan'):
+            new_app = FastAPI(title="카카오 이모티콘 MCP 서버", lifespan=_mcp_app.lifespan)
+            new_app.add_middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            # 기존 라우트 복사
+            for route in app.routes:
+                new_app.routes.append(route)
+            app = new_app
+            print("FastAPI app recreated with MCP lifespan")
+        
+        return True
+    except Exception as e:
+        print(f"Warning: MCP initialization failed: {e}")
+        traceback.print_exc()
+        print("Server will continue running without MCP support")
+        return False
+
+
+# MCP 초기화 실행 (_register_tools가 정의된 후에 실행)
+_init_mcp_app()
 
 # MCP 앱을 루트에 마운트 (모든 라우트 정의 후에 마운트해야 기존 엔드포인트가 우선됨)
 if _mcp_app is not None:
