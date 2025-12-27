@@ -67,7 +67,7 @@ async def health_check():
 @app.get("/.well-known/mcp")
 async def mcp_metadata():
     """MCP 서버 메타데이터 엔드포인트 (PlayMCP가 서버 정보를 불러올 때 사용)"""
-    from src.mcp_tools_schema import get_mcp_tools_list, MCP_PROTOCOL_VERSION
+    from src.mcp_tools_schema import get_mcp_tools_list, MCP_PROTOCOL_VERSION, MCP_SERVER_INSTRUCTIONS
     
     return {
         "version": "1.0",
@@ -77,7 +77,8 @@ async def mcp_metadata():
             "title": "카카오 이모티콘 MCP 서버",
             "version": "1.0.0"
         },
-        "description": "카카오톡 이모티콘 제작 자동화 MCP 서버. 큰 방향(캐릭터, 분위기, 타입)만 물어보고 세부 기획은 AI가 직접 창작합니다.",
+        "description": "카카오톡 이모티콘 제작 자동화 MCP 서버. 사용자가 '이모티콘', '스티커', '카카오톡'을 언급하면 AI가 자동으로 도구를 사용합니다.",
+        "instructions": MCP_SERVER_INSTRUCTIONS,
         "transport": {
             "type": "streamable-http",
             "endpoint": "/"
@@ -140,7 +141,7 @@ def _register_tools(mcp):
     """MCP 도구들을 등록"""
     
     @mcp.tool(
-        description="[2단계] 제작 전 프리뷰 생성. AI가 이모티콘 설명을 직접 창작하여 카카오톡 스타일 프리뷰 페이지를 생성합니다. 사용자에게는 큰 방향만 묻고 세부 기획은 AI가 창작하세요."
+        description="[2단계] 제작 전 프리뷰 생성. 트리거: get_specs_tool 호출 후 사용자가 캐릭터/분위기를 알려주면 호출. AI가 타입별 개수(16~42개)만큼 이모티콘 설명을 직접 창작합니다."
     )
     async def before_preview_tool(
         emoticon_type: str,
@@ -160,7 +161,7 @@ def _register_tools(mcp):
         return response.model_dump()
 
     @mcp.tool(
-        description="[3단계] AI 이모티콘 이미지 생성. 캐릭터 이미지와 설명을 기반으로 실제 이모티콘 이미지를 생성합니다. 캐릭터 이미지 없으면 자동 생성됩니다."
+        description="[3단계] AI 이모티콘 이미지 생성. 트리거: before_preview_tool 호출 후 자동으로 호출. 캐릭터 이미지 없으면 AI가 자동 생성합니다."
     )
     async def generate_tool(
         emoticon_type: str,
@@ -193,7 +194,7 @@ def _register_tools(mcp):
         return response.model_dump()
 
     @mcp.tool(
-        description="[4단계] 완성본 프리뷰 생성. 실제 이모티콘 이미지가 포함된 카카오톡 스타일 프리뷰와 ZIP 다운로드 URL을 제공합니다."
+        description="[4단계] 완성본 프리뷰 생성. 트리거: generate_tool 호출 후 자동으로 호출. 카카오톡 스타일 프리뷰와 ZIP 다운로드 URL을 제공합니다."
     )
     async def after_preview_tool(
         emoticon_type: str,
@@ -215,7 +216,7 @@ def _register_tools(mcp):
         return response.model_dump()
 
     @mcp.tool(
-        description="[5단계] 카카오톡 규격 검사. 파일 형식, 크기, 용량, 개수가 제출 규격에 맞는지 검증합니다."
+        description="[5단계] 카카오톡 규격 검사. 트리거: after_preview_tool 호출 후 자동으로 호출하여 제출 규격 검증. 문제 발견 시 사용자에게 안내."
     )
     async def check_tool(
         emoticon_type: str,
@@ -235,7 +236,7 @@ def _register_tools(mcp):
         return response.model_dump()
 
     @mcp.tool(
-        description="[1단계] 카카오톡 이모티콘 사양 조회. 타입별 개수, 파일 형식, 크기 제한을 확인합니다. 작업 시작 전 반드시 먼저 호출하세요."
+        description="[1단계] 카카오톡 이모티콘 사양 조회. 트리거: 사용자가 '이모티콘', '스티커', '카카오톡' 등을 언급하면 즉시 이 도구부터 호출하세요. 타입별 개수, 파일 형식, 크기 제한을 반환합니다."
     )
     async def get_specs_tool(
         emoticon_type: Optional[str] = None
