@@ -67,15 +67,17 @@ async def health_check():
 @app.get("/.well-known/mcp")
 async def mcp_metadata():
     """MCP 서버 메타데이터 엔드포인트 (PlayMCP가 서버 정보를 불러올 때 사용)"""
+    from src.mcp_tools_schema import get_mcp_tools_list, MCP_PROTOCOL_VERSION
+    
     return {
         "version": "1.0",
-        "protocolVersion": "2024-11-05",
+        "protocolVersion": MCP_PROTOCOL_VERSION,
         "serverInfo": {
             "name": "kakao-emoticon-mcp",
             "title": "카카오 이모티콘 MCP 서버",
             "version": "1.0.0"
         },
-        "description": "카카오톡 이모티콘 제작 자동화 MCP 서버. 큰 방향(캐릭터, 분위기, 타입)만 물어보고 세부 기획(각 이모티콘의 설명)은 AI가 직접 창작합니다.",
+        "description": "카카오톡 이모티콘 제작 자동화 MCP 서버. 큰 방향(캐릭터, 분위기, 타입)만 물어보고 세부 기획은 AI가 직접 창작합니다.",
         "transport": {
             "type": "streamable-http",
             "endpoint": "/"
@@ -85,28 +87,7 @@ async def mcp_metadata():
             "resources": {},
             "prompts": {}
         },
-        "tools": [
-            {
-                "name": "get_specs_tool",
-                "description": "이모티콘 사양 조회. 타입별 필요 개수, 파일 형식, 크기 등을 확인합니다."
-            },
-            {
-                "name": "before_preview_tool",
-                "description": "제작 전 프리뷰. 큰 방향(캐릭터, 분위기)만 묻고 개별 이모티콘 설명은 AI가 직접 창작합니다."
-            },
-            {
-                "name": "generate_tool",
-                "description": "AI 이모티콘 생성. 기획을 기반으로 실제 이미지를 생성합니다."
-            },
-            {
-                "name": "after_preview_tool",
-                "description": "완성본 프리뷰. 카카오톡 채팅 스타일로 결과물을 확인하고 다운로드할 수 있습니다."
-            },
-            {
-                "name": "check_tool",
-                "description": "규격 검사. 제출 전 카카오톡 규격에 맞는지 검증합니다."
-            }
-        ]
+        "tools": get_mcp_tools_list()
     }
 
 
@@ -159,42 +140,7 @@ def _register_tools(mcp):
     """MCP 도구들을 등록"""
     
     @mcp.tool(
-        description="""
-제작 전 프리뷰 도구
-
-목적: 실제 이미지 대신 텍스트 설명이 표시되는 카카오톡 스타일 채팅 프리뷰 페이지를 생성합니다.
-
-⚠️ AI 행동 지침:
-✅ 적절한 질문: "어떤 느낌의 이모티콘을 원하세요?", "어떤 타입으로 할까요?"
-❌ 부적절한 질문: "이모티콘 하나하나 어떤 상황인지 다 알려주세요"
-
-- 큰 방향(캐릭터, 분위기, 타입)만 물어보고
-- 개별 이모티콘 설명(타입별 16~42개)은 AI가 직접 창작해야 합니다
-
-워크플로우 위치: get_specs_tool 호출 후 가장 먼저 사용
-
-요청 시 필요한 정보:
-- emoticon_type (문자열, 필수): 이모티콘 타입
-  - "static": 멈춰있는 이모티콘 (32개)
-  - "dynamic": 움직이는 이모티콘 (24개)
-  - "big": 큰 이모티콘 (16개)
-  - "static-mini": 멈춰있는 미니 (42개)
-  - "dynamic-mini": 움직이는 미니 (35개)
-- title (문자열, 필수): 이모티콘 세트 제목
-- plans (배열, 필수): 각 이모티콘 기획 목록 (AI가 직접 창작)
-  - description (문자열): 이모티콘 설명 (예: "손 흔드는 고양이")
-  - file_type (문자열): 파일 형식 ("PNG" 또는 "WebP")
-
-반환값:
-- preview_url: 텍스트 기반 프리뷰 페이지 URL
-- total_count: 기획된 이모티콘 총 개수
-- emoticon_type: 사용된 이모티콘 타입
-- title: 이모티콘 세트 제목
-
-예시:
-사용자: "고양이 이모티콘 만들어줘"
-AI: "어떤 느낌의 고양이로 할까요?" (적절) → "귀여운 고양이로 해주세요" → AI가 "하품하는 고양이", "화난 고양이" 등 타입에 맞는 개수만큼 직접 창작
-"""
+        description="[2단계] 제작 전 프리뷰 생성. AI가 이모티콘 설명을 직접 창작하여 카카오톡 스타일 프리뷰 페이지를 생성합니다. 사용자에게는 큰 방향만 묻고 세부 기획은 AI가 창작하세요."
     )
     async def before_preview_tool(
         emoticon_type: str,
@@ -214,43 +160,7 @@ AI: "어떤 느낌의 고양이로 할까요?" (적절) → "귀여운 고양이
         return response.model_dump()
 
     @mcp.tool(
-        description="""
-AI 이모티콘 생성기
-
-목적: 캐릭터 참조 이미지와 설명을 기반으로 AI가 실제 이모티콘 이미지를 생성합니다.
-이것이 이모티콘 이미지를 만드는 핵심 도구입니다.
-
-⚠️ AI 행동 지침:
-- 1단계에서 만든 기획을 그대로 사용하여 생성
-- 캐릭터 이미지가 없으면 AI가 자동 생성 (사용자에게 요청 X)
-- 생성 중간에 사용자 확인 불필요
-
-워크플로우 위치: before_preview_tool 직후 사용
-
-요청 시 필요한 정보:
-- emoticon_type (문자열, 필수): 이모티콘 타입 (크기, 포맷, 애니메이션 결정)
-- emoticons (배열, 필수): 생성할 이모티콘 목록
-  - description (문자열): 이모티콘 상세 설명
-  - file_extension (문자열): 파일 확장자 ("png" 또는 "webp")
-- character_image (문자열, 선택): 캐릭터 참조 이미지 (Base64 또는 URL)
-  - 생략하면 AI가 새 캐릭터를 자동 생성
-- hf_token (문자열, 선택): Hugging Face API 토큰
-  - Authorization 헤더(Bearer 토큰)로도 전달 가능
-
-반환값:
-- emoticons (배열): 생성된 이미지들
-  - index: 이모티콘 번호
-  - image_data: Base64 인코딩된 이미지 데이터
-  - file_extension: 파일 확장자
-  - width, height: 이미지 크기
-  - size_kb: 파일 용량 (KB)
-- icon: 자동 생성된 아이콘 (78x78 PNG)
-- emoticon_type: 사용된 이모티콘 타입
-
-동작 방식:
-- 정적 이모티콘 (static, static-mini): PNG 이미지 생성
-- 움직이는 이모티콘 (dynamic, dynamic-mini, big): 비디오 생성 → 애니메이션 WebP 변환
-"""
+        description="[3단계] AI 이모티콘 이미지 생성. 캐릭터 이미지와 설명을 기반으로 실제 이모티콘 이미지를 생성합니다. 캐릭터 이미지 없으면 자동 생성됩니다."
     )
     async def generate_tool(
         emoticon_type: str,
@@ -283,33 +193,7 @@ AI 이모티콘 생성기
         return response.model_dump()
 
     @mcp.tool(
-        description="""
-완성본 프리뷰
-
-목적: 실제 이모티콘 이미지가 포함된 카카오톡 스타일 채팅 프리뷰 페이지를 생성합니다.
-사용자가 실제 채팅 환경에서 이모티콘이 어떻게 보이는지 확인하고 다운로드할 수 있습니다.
-
-⚠️ AI 행동 지침:
-- generate_tool 완료 후 자동으로 호출
-- 프리뷰 URL과 다운로드 URL을 사용자에게 제공
-- "마음에 드세요?" 같은 피드백 질문은 적절함
-
-워크플로우 위치: generate_tool 직후 사용
-
-요청 시 필요한 정보:
-- emoticon_type (문자열, 필수): 이모티콘 타입
-- title (문자열, 필수): 이모티콘 세트 제목
-- emoticons (배열, 필수): 이모티콘 이미지 목록
-  - image_data (문자열): Base64 인코딩 이미지 또는 URL
-  - frames (배열, 선택): 움직이는 이모티콘의 프레임 이미지들
-- icon (문자열, 선택): 아이콘 이미지 (Base64 또는 URL)
-
-반환값:
-- preview_url: 카카오톡 채팅 시뮬레이션에서 이모티콘 확인 URL
-- download_url: 제출용 ZIP 파일 다운로드 URL
-- emoticon_type: 이모티콘 타입
-- title: 이모티콘 세트 제목
-"""
+        description="[4단계] 완성본 프리뷰 생성. 실제 이모티콘 이미지가 포함된 카카오톡 스타일 프리뷰와 ZIP 다운로드 URL을 제공합니다."
     )
     async def after_preview_tool(
         emoticon_type: str,
@@ -331,45 +215,7 @@ AI 이모티콘 생성기
         return response.model_dump()
 
     @mcp.tool(
-        description="""
-카카오톡 규격 검사기
-
-목적: 이모티콘이 카카오톡 공식 제출 규격에 맞는지 검증합니다.
-제출 전 모든 기술 사양을 충족하는지 확인합니다.
-
-⚠️ AI 행동 지침:
-- 프리뷰 표시 후 자동으로 검증 실행
-- 문제 발견 시 설명 후 수정 제안
-
-워크플로우 위치: after_preview_tool 직후 마지막 단계
-
-요청 시 필요한 정보:
-- emoticon_type (문자열, 필수): 검증할 이모티콘 타입
-- emoticons (배열, 필수): 검사할 이모티콘 목록
-  - file_data (문자열): Base64 인코딩된 파일 데이터
-  - filename (문자열, 선택): 파일명
-- icon (객체, 선택): 검사할 아이콘 이미지
-  - file_data (문자열): Base64 인코딩된 파일 데이터
-  - filename (문자열, 선택): 파일명
-
-반환값:
-- is_valid (불리언): 모든 검사 통과 여부
-- issues (배열): 발견된 문제 목록
-  - index: 문제가 있는 이모티콘 번호 (-1: 아이콘, -2: 전체)
-  - issue_type: 문제 유형 (size, format, dimension, count)
-  - message: 사람이 읽을 수 있는 설명
-  - current_value: 현재 값
-  - expected_value: 기대 값
-- checked_count: 검사한 이모티콘 개수
-- emoticon_type: 검사한 이모티콘 타입
-
-검증 항목:
-- 파일 형식 (정적: PNG, 움직이는: WebP)
-- 이미지 크기 (타입에 따라 360x360, 180x180, 540x540)
-- 파일 용량 (타입에 따라 100KB~1MB)
-- 이모티콘 개수 (타입에 따라 16~42개)
-- 아이콘 규격 (78x78 PNG, 최대 16KB)
-"""
+        description="[5단계] 카카오톡 규격 검사. 파일 형식, 크기, 용량, 개수가 제출 규격에 맞는지 검증합니다."
     )
     async def check_tool(
         emoticon_type: str,
@@ -389,45 +235,7 @@ AI 이모티콘 생성기
         return response.model_dump()
 
     @mcp.tool(
-        description="""
-카카오톡 이모티콘 사양 정보
-
-목적: 카카오톡 공식 이모티콘 제출 사양을 조회합니다.
-몇 개의 이모티콘을 만들어야 하는지, 어떤 포맷을 사용해야 하는지 먼저 확인하세요.
-
-⚠️ AI 행동 지침:
-- 기획 전에 사양 확인하여 개수와 포맷 파악
-- 사용자에게 "어떤 타입으로 할까요?" 질문 가능 (적절한 질문)
-
-워크플로우 위치: before_preview_tool 전에 가장 먼저 호출
-
-요청 시 필요한 정보:
-- emoticon_type (문자열, 선택): 조회할 특정 타입
-  - 생략하면 모든 타입 정보 반환
-  - "static": 멈춰있는 이모티콘
-  - "dynamic": 움직이는 이모티콘
-  - "big": 큰 이모티콘
-  - "static-mini": 멈춰있는 미니 이모티콘
-  - "dynamic-mini": 움직이는 미니 이모티콘
-
-반환값 (각 타입별):
-- type: 이모티콘 타입 식별자
-- type_name: 한글 이름
-- count: 필요한 이모티콘 개수
-- format: 필요한 파일 형식 (PNG 또는 WebP)
-- sizes: 허용 크기 [{width, height}]
-- max_size_kb: 이모티콘당 최대 파일 크기
-- icon_size: 아이콘 크기 (78x78)
-- icon_max_size_kb: 아이콘 최대 크기 (16KB)
-- is_animated: 애니메이션 지원 여부
-
-이모티콘 타입 요약:
-- static: 멈춰있는 이모티콘 (32개 PNG, 360x360, 최대 150KB)
-- dynamic: 움직이는 이모티콘 (24개 WebP, 360x360, 최대 650KB)
-- big: 큰 이모티콘 (16개 WebP, 최대 540x540, 최대 1MB)
-- static-mini: 멈춰있는 미니 (42개 PNG, 180x180, 최대 100KB)
-- dynamic-mini: 움직이는 미니 (35개 WebP, 180x180, 최대 500KB)
-"""
+        description="[1단계] 카카오톡 이모티콘 사양 조회. 타입별 개수, 파일 형식, 크기 제한을 확인합니다. 작업 시작 전 반드시 먼저 호출하세요."
     )
     async def get_specs_tool(
         emoticon_type: Optional[str] = None
@@ -475,41 +283,11 @@ def _get_mcp():
         return _mcp
     
     from fastmcp import FastMCP
+    from src.mcp_tools_schema import MCP_SERVER_INSTRUCTIONS
     
     _mcp = FastMCP(
         name="kakao-emoticon-mcp",
-        instructions="""
-카카오톡 이모티콘 제작 자동화 MCP 서버입니다.
-
-✅ 적절한 질문 (큰 방향성 결정):
-- 어떤 캐릭터/주제로 이모티콘을 만들지
-- 어떤 감정/상황을 표현하고 싶은지
-- 원하는 전체적인 느낌/분위기
-- 결과물이 마음에 드는지
-- 어떤 타입(멈춰있는/움직이는)으로 할지
-
-❌ 부적절한 질문 (AI가 스스로 해야 함):
-- 이모티콘 하나하나의 상황을 사용자에게 다 물어보기
-- 캐릭터를 극단적으로 자세하게 묘사하라고 요구
-- 세부적인 포즈나 표정 하나하나 물어보기
-- 이모티콘 지식 없이 사용자에게 따지기
-
-예시:
-사용자: "고양이 이모티콘 만들어줘"
-- ✅ "어떤 느낌의 고양이로 할까요? (귀여운/시크한/웃긴)" - 적절
-- ❌ "이모티콘 하나하나 어떤 상황인지 다 알려주세요" - 부적절
-- AI가 알아서 "하품하는 고양이", "화난 고양이" 등 타입에 맞는 개수를 창작해야 함
-(타입별 개수: static 32개, dynamic 24개, big 16개, static-mini 42개, dynamic-mini 35개)
-
-워크플로우:
-1. get_specs_tool: 선택한 이모티콘 타입의 사양 확인
-2. before_preview_tool: AI가 창의적인 설명으로 기획 생성 (세부 설명은 AI가 직접 창작)
-3. generate_tool: AI 기획 기반으로 모든 이모티콘 생성
-4. after_preview_tool: 최종 프리뷰 표시 및 다운로드 제공
-5. check_tool: 제출 전 규격 검증
-
-AI는 큰 방향만 사용자에게 묻고, 세부 기획은 스스로 창작해야 합니다.
-"""
+        instructions=MCP_SERVER_INSTRUCTIONS
     )
     
     _register_tools(_mcp)
