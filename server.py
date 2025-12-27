@@ -71,6 +71,26 @@ async def mcp_metadata():
     """MCP 서버 메타데이터 엔드포인트 (PlayMCP가 서버 정보를 불러올 때 사용)"""
     from src.mcp_tools_schema import get_mcp_tools_list, MCP_PROTOCOL_VERSION, MCP_SERVER_INSTRUCTIONS
     
+    # 실제 마운트된 transport에 따라 동적으로 메타데이터 생성
+    transports = []
+    primary_transport = None
+    
+    if _mcp_sse_app is not None:
+        sse_transport = {
+            "type": "sse",
+            "endpoint": "/sse",
+            "messagesEndpoint": "/sse/messages"
+        }
+        transports.append(sse_transport)
+        primary_transport = sse_transport
+    elif _mcp_app is not None:
+        http_transport = {
+            "type": "streamable-http",
+            "endpoint": "/"
+        }
+        transports.append(http_transport)
+        primary_transport = http_transport
+    
     return {
         "version": "1.0",
         "protocolVersion": MCP_PROTOCOL_VERSION,
@@ -81,20 +101,8 @@ async def mcp_metadata():
         },
         "description": "카카오톡 이모티콘 제작 자동화 MCP 서버. 사용자가 '이모티콘', '스티커', '카카오톡'을 언급하면 AI가 자동으로 도구를 사용합니다.",
         "instructions": MCP_SERVER_INSTRUCTIONS,
-        "transports": [
-            {
-                "type": "sse",
-                "endpoint": "/sse"
-            },
-            {
-                "type": "streamable-http",
-                "endpoint": "/"
-            }
-        ],
-        "transport": {
-            "type": "sse",
-            "endpoint": "/sse"
-        },
+        "transports": transports,
+        "transport": primary_transport,
         "capabilities": {
             "tools": {"listChanged": False},
             "resources": {},
@@ -335,25 +343,21 @@ def _init_mcp_app():
                 print(f"Warning: SSE app creation failed: {e}")
                 _mcp_sse_app = None
         
-        # Streamable HTTP transport 생성
+        # Streamable HTTP transport 생성 (SSE가 없을 때 폴백으로 사용)
         if hasattr(mcp_instance, 'streamable_http_app'):
             try:
                 _mcp_app = mcp_instance.streamable_http_app(path='/')
             except TypeError:
                 _mcp_app = mcp_instance.streamable_http_app()
-            _mcp_transport_type = "Streamable HTTP + SSE" if _mcp_sse_app else "Streamable HTTP"
+            _mcp_transport_type = "Streamable HTTP"
         elif hasattr(mcp_instance, 'http_app'):
             try:
                 _mcp_app = mcp_instance.http_app(path='/')
             except TypeError:
                 _mcp_app = mcp_instance.http_app()
-            _mcp_transport_type = "HTTP + SSE" if _mcp_sse_app else "HTTP"
-        elif _mcp_sse_app:
-            # SSE만 사용 가능한 경우
-            _mcp_app = _mcp_sse_app
-            _mcp_sse_app = None  # 중복 마운트 방지
-            _mcp_transport_type = "SSE"
-        else:
+            _mcp_transport_type = "HTTP"
+        elif not _mcp_sse_app:
+            # SSE도 Streamable HTTP도 없으면 에러
             raise AttributeError("FastMCP instance has no supported app method")
         
         print(f"MCP app created - {_mcp_transport_type} transport")
@@ -385,13 +389,19 @@ def _init_mcp_app():
 # MCP 초기화 실행 (_register_tools가 정의된 후에 실행)
 _init_mcp_app()
 
-# SSE 앱을 /sse에 마운트 (PlayMCP 호환성을 위해 먼저 마운트)
+# SSE와 Streamable HTTP 마운트 전략:
+# - FastMCP의 sse_app()은 내부적으로 /sse와 /sse/messages 경로를 생성함
+# - "/sse"에 마운트하면 /sse/sse로 중복되므로 빈 문자열로 마운트해야 올바른 경로 노출
+# - SSE가 사용 가능하면 SSE만 사용 (PlayMCP 호환성 우선)
+# - Streamable HTTP는 SSE가 없을 때만 폴백으로 사용
 if _mcp_sse_app is not None:
-    app.mount("/sse", _mcp_sse_app)
-    print("SSE endpoint mounted at /sse")
-
-# MCP 앱을 루트에 마운트 (모든 라우트 정의 후에 마운트해야 기존 엔드포인트가 우선됨)
-if _mcp_app is not None:
+    # SSE 앱을 루트에 마운트하여 /sse와 /sse/messages 노출
+    # FastAPI의 명시적 라우트(/health, /.well-known/mcp 등)는 마운트된 앱보다 우선 처리됨
+    app.mount("", _mcp_sse_app)
+    print("SSE endpoint mounted (exposes /sse and /sse/messages)")
+    print(f"MCP server initialized - SSE transport available")
+elif _mcp_app is not None:
+    # SSE가 없을 때만 Streamable HTTP 사용
     app.mount("/", _mcp_app)
     print(f"MCP server initialized - {_mcp_transport_type} endpoint available")
 else:
