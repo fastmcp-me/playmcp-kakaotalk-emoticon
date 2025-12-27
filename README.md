@@ -54,6 +54,50 @@
 |------|------|
 | 이모티콘 이미지 | 35개, WebP, 180×180px, 500KB |
 
+## Hugging Face 토큰 인증
+
+이모티콘 생성(`generate` 도구)을 사용하려면 Hugging Face API 토큰이 필요합니다. 다음 두 가지 방법으로 토큰을 전달할 수 있습니다:
+
+### 방법 1: Authorization 헤더 (권장) ✅
+
+**가장 안전한 방법입니다.** HTTP 요청의 Authorization 헤더에 Bearer 토큰으로 전달합니다.
+
+```
+Authorization: Bearer hf_xxxxxxxxxxxxxxxxxxxxx
+```
+
+PlayMCP에서 사용 시, PlayMCP의 인증 설정을 통해 토큰을 안전하게 저장하고 자동으로 전달할 수 있습니다.
+
+### 방법 2: hf_token 파라미터 (대안)
+
+도구 호출 시 `hf_token` 파라미터로 직접 전달합니다. 헤더 방식을 사용할 수 없는 환경에서 사용합니다.
+
+```json
+{
+  "emoticon_type": "static",
+  "emoticons": [...],
+  "hf_token": "hf_xxxxxxxxxxxxxxxxxxxxx"
+}
+```
+
+### 인증 방식 비교
+
+| 방식 | 안전성 | 설명 |
+|------|--------|------|
+| Authorization 헤더 | ⭐⭐⭐ | 토큰이 요청 본문에 노출되지 않음. PlayMCP 인증 시스템과 통합 가능 |
+| hf_token 파라미터 | ⭐⭐ | 토큰이 요청 본문에 포함됨. 헤더를 사용할 수 없는 경우에 사용 |
+| HF_TOKEN 환경변수 | ⭐ | 서버 기본값. 모든 사용자가 동일 토큰 사용. 개인 토큰 권장 |
+
+**토큰 우선순위**: Authorization 헤더 > hf_token 파라미터 > HF_TOKEN 환경변수
+
+### Hugging Face 토큰 발급
+
+1. [Hugging Face](https://huggingface.co)에 로그인
+2. Settings → Access Tokens 이동
+3. "New token" 클릭
+4. 토큰 이름 입력 및 권한 설정 (read 권한 필요)
+5. 생성된 `hf_xxx...` 토큰을 안전하게 보관
+
 ## 설치 및 실행
 
 ### 1. 의존성 설치
@@ -63,7 +107,8 @@ pip install -r requirements.txt
 
 ### 2. 환경 변수 설정
 ```bash
-# Hugging Face API 토큰 (필수)
+# Hugging Face API 토큰 (서버 기본값으로 사용 - 선택)
+# 사용자별 토큰은 Authorization 헤더로 전달하는 것을 권장합니다
 export HF_TOKEN="your_huggingface_token"
 
 # 서버 설정 (선택)

@@ -18,6 +18,33 @@ _mcp = None
 _mcp_app = None
 _mcp_transport_type = None
 
+
+def _extract_hf_token_from_headers() -> Optional[str]:
+    """
+    HTTP 헤더에서 Hugging Face 토큰을 추출합니다.
+    Authorization: Bearer <token> 형식을 지원합니다.
+    
+    Returns:
+        추출된 토큰 또는 None
+    """
+    try:
+        from fastmcp.server.dependencies import get_http_headers
+        headers = get_http_headers()
+        if headers:
+            # case-insensitive 헤더 검색
+            auth_header = None
+            for key, value in headers.items():
+                if key.lower() == "authorization":
+                    auth_header = value
+                    break
+            
+            if auth_header and auth_header.lower().startswith("bearer "):
+                return auth_header[7:].strip()  # "Bearer " 이후의 토큰 부분 추출
+    except Exception:
+        # 헤더를 가져올 수 없는 경우 (예: HTTP 컨텍스트가 아닌 경우)
+        pass
+    return None
+
 # FastAPI 앱 생성 (lifespan은 MCP 초기화 후 설정됨)
 app = FastAPI(title="카카오 이모티콘 MCP 서버")
 
@@ -65,7 +92,7 @@ async def mcp_metadata():
             },
             {
                 "name": "generate_tool",
-                "description": "이모티콘 생성. 캐릭터 이미지와 이모티콘 설명을 기반으로 AI가 이모티콘을 생성합니다."
+                "description": "이모티콘 생성. 캐릭터 이미지와 이모티콘 설명을 기반으로 AI가 이모티콘을 생성합니다. 허깅페이스 토큰은 Authorization 헤더(Bearer)로 안전하게 전달할 수 있습니다."
             },
             {
                 "name": "after_preview_tool",
@@ -133,7 +160,7 @@ def _register_tools(mcp):
     
     @mcp.tool(
         description="이모티콘 제작 이전 프리뷰. 카카오톡 채팅방과 같은 디자인의 페이지에서 "
-                    "이모티콘 탭 부분에 이모티콘 설명이 글자로 표시되는 프리뷰 페이지 URL을 반환합니다. "
+                    "이모티콘 이미지 없이 이모티콘은 글자로 표기되어 테스트 할 수 있는 프리뷰 페이지 URL을 반환합니다. "
                     "이모티콘 기획/계획 단계에서 사용합니다."
     )
     async def before_preview_tool(
@@ -157,7 +184,8 @@ def _register_tools(mcp):
         description="이모티콘 생성. 캐릭터 이미지와 이모티콘 설명을 기반으로 AI가 이모티콘을 생성합니다. "
                     "캐릭터 이미지가 없으면 자동으로 생성합니다. "
                     "움직이는 이모티콘은 비디오 생성 후 애니메이션 WebP로 변환됩니다. "
-                    "허깅페이스 토큰이 필요합니다."
+                    "허깅페이스 토큰은 Authorization 헤더(Bearer 토큰)로 안전하게 전달하거나, "
+                    "hf_token 파라미터로 직접 전달할 수 있습니다."
     )
     async def generate_tool(
         emoticon_type: str,
@@ -168,18 +196,30 @@ def _register_tools(mcp):
         from src.models import GenerateRequest, EmoticonGenerateItem
         from src.tools import generate
         
+        # Authorization 헤더에서 토큰 추출 시도, 없으면 파라미터 사용
+        # 우선순위: Authorization 헤더 > hf_token 파라미터 > 환경변수 HF_TOKEN
+        token = _extract_hf_token_from_headers() or hf_token
+        
+        # 토큰이 없고 환경변수도 없으면 에러 반환
+        if not token and not os.environ.get("HF_TOKEN"):
+            return {
+                "error": "Hugging Face 토큰이 필요합니다.",
+                "message": "Authorization 헤더(Bearer 토큰) 또는 hf_token 파라미터로 토큰을 전달해주세요.",
+                "token_url": "https://huggingface.co/settings/tokens"
+            }
+        
         request = GenerateRequest(
             emoticon_type=emoticon_type,
             character_image=character_image,
             emoticons=[EmoticonGenerateItem(**e) for e in emoticons]
         )
         
-        response = await generate(request, hf_token)
+        response = await generate(request, token)
         return response.model_dump()
 
     @mcp.tool(
-        description="완성본 프리뷰. 실제 이모티콘 이미지가 포함된 카카오톡 스타일 프리뷰 페이지를 생성합니다. "
-                    "상단에 ZIP 다운로드 버튼이 있으며, 이모티콘을 클릭하면 확대해서 볼 수 있습니다."
+        description="완성본 프리뷰. 실제 이모티콘 이미지가 포함된 카카오톡 채팅방 스타일 프리뷰 페이지를 생성합니다. "
+                    "완성된 이모티콘은 zip으로 다운로드 할 수 있습니다."
     )
     async def after_preview_tool(
         emoticon_type: str,
