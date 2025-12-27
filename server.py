@@ -343,17 +343,34 @@ async def get_download(download_id: str):
     return Response(content="Download not found", status_code=404)
 
 
-# MCP Streamable HTTP 앱을 루트에 마운트 (PlayMCP가 루트로 POST 요청을 보냄)
+# MCP 앱을 루트에 마운트 (PlayMCP가 루트로 요청을 보냄)
 # try-except로 감싸서 MCP 초기화 실패해도 서버는 시작되도록 함
 try:
     import traceback
     print("Initializing MCP server...")
     mcp_instance = _get_mcp()
-    print("MCP instance created, mounting Streamable HTTP app...")
-    # Streamable HTTP 방식 지원을 위해 streamable_http_app() 사용
+    print("MCP instance created, checking available app methods...")
+    
+    # FastMCP 버전에 따라 사용 가능한 메서드가 다름
+    # streamable_http_app() -> http_app() -> sse_app() 순으로 시도
+    mcp_app = None
+    transport_type = None
+    
+    if hasattr(mcp_instance, 'streamable_http_app'):
+        mcp_app = mcp_instance.streamable_http_app()
+        transport_type = "Streamable HTTP"
+    elif hasattr(mcp_instance, 'http_app'):
+        mcp_app = mcp_instance.http_app()
+        transport_type = "HTTP"
+    elif hasattr(mcp_instance, 'sse_app'):
+        mcp_app = mcp_instance.sse_app()
+        transport_type = "SSE"
+    else:
+        raise AttributeError("FastMCP instance has no supported app method (streamable_http_app, http_app, or sse_app)")
+    
     # 모든 명시적 라우트 정의 후에 마운트해야 기존 엔드포인트가 우선됨
-    app.mount("/", mcp_instance.streamable_http_app())
-    print("MCP server initialized - Streamable HTTP endpoint available at root")
+    app.mount("/", mcp_app)
+    print(f"MCP server initialized - {transport_type} endpoint available at root")
 except Exception as e:
     print(f"Warning: MCP initialization failed: {e}")
     traceback.print_exc()
