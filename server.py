@@ -17,7 +17,6 @@ from pydantic import Field
 # MCP 관련 전역 변수 (하단에서 초기화)
 _mcp = None
 _mcp_app = None
-_mcp_sse_app = None  # SSE transport용 앱
 _mcp_transport_type = None
 
 
@@ -83,19 +82,13 @@ async def mcp_metadata():
         "instructions": MCP_SERVER_INSTRUCTIONS,
         "transports": [
             {
-                "type": "sse",
-                "endpoint": "/sse/sse",
-                "messagesEndpoint": "/sse/messages"
-            },
-            {
                 "type": "streamable-http",
                 "endpoint": "/"
             }
         ],
         "transport": {
-            "type": "sse",
-            "endpoint": "/sse/sse",
-            "messagesEndpoint": "/sse/messages"
+            "type": "streamable-http",
+            "endpoint": "/"
         },
         "capabilities": {
             "tools": {"listChanged": False},
@@ -115,7 +108,6 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "mcp": "/",
-            "mcp_sse": "/sse/sse",
             "health": "/health",
             "preview": "/preview/{preview_id}",
             "download": "/download/{download_id}"
@@ -320,7 +312,7 @@ def _get_mcp():
 
 def _init_mcp_app():
     """MCP 앱을 초기화하고 lifespan을 가져옴"""
-    global _mcp_app, _mcp_sse_app, _mcp_transport_type, app
+    global _mcp_app, _mcp_transport_type, app
     
     try:
         import traceback
@@ -328,16 +320,8 @@ def _init_mcp_app():
         mcp_instance = _get_mcp()
         print("MCP instance created, checking available app methods...")
         
-        # SSE transport 생성
-        if hasattr(mcp_instance, 'sse_app'):
-            try:
-                _mcp_sse_app = mcp_instance.sse_app()
-                print("SSE transport app created")
-            except Exception as e:
-                print(f"Warning: SSE app creation failed: {e}")
-                _mcp_sse_app = None
-        
-        # Streamable HTTP transport 생성 (현대적이고 권장되는 방식)
+        # Streamable HTTP transport 생성
+        # Streamable HTTP는 하나의 엔드포인트에서 GET(SSE 스트림)과 POST(JSON-RPC)를 모두 처리
         if hasattr(mcp_instance, 'streamable_http_app'):
             try:
                 _mcp_app = mcp_instance.streamable_http_app(path='/')
@@ -350,7 +334,7 @@ def _init_mcp_app():
             except TypeError:
                 _mcp_app = mcp_instance.http_app()
             _mcp_transport_type = "HTTP"
-        elif not _mcp_sse_app:
+        else:
             raise AttributeError("FastMCP instance has no supported app method")
         
         print(f"MCP app created - {_mcp_transport_type} transport")
@@ -382,19 +366,13 @@ def _init_mcp_app():
 # MCP 초기화 실행 (_register_tools가 정의된 후에 실행)
 _init_mcp_app()
 
-# SSE transport를 /sse에 마운트 (SSE 엔드포인트는 /sse/sse, 메시지는 /sse/messages가 됨)
-# FastMCP의 sse_app()은 내부적으로 /sse와 /messages 경로를 생성함
-if _mcp_sse_app is not None:
-    app.mount("/sse", _mcp_sse_app)
-    print("SSE endpoint mounted at /sse (exposes /sse/sse and /sse/messages)")
-
 # Streamable HTTP transport를 루트에 마운트
+# Streamable HTTP는 하나의 엔드포인트에서 GET(SSE 스트림)과 POST(JSON-RPC)를 모두 처리함
 # FastAPI의 명시적 라우트(/health, /.well-known/mcp 등)는 마운트된 앱보다 우선 처리됨
 if _mcp_app is not None:
     app.mount("/", _mcp_app)
     print(f"MCP server initialized - {_mcp_transport_type} endpoint available at /")
-
-if _mcp_app is None and _mcp_sse_app is None:
+else:
     print("MCP app not available - server running without MCP support")
 
 
