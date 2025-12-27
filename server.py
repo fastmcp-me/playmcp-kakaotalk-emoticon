@@ -200,11 +200,11 @@ def _register_tools(mcp):
         from src.tools import generate
         
         # Authorization 헤더에서 토큰 추출 시도, 없으면 파라미터 사용
-        # 우선순위: Authorization 헤더 > hf_token 파라미터 > 환경변수 HF_TOKEN
+        # 우선순위: Authorization 헤더 > hf_token 파라미터
         token = _extract_hf_token_from_headers() or hf_token
         
-        # 토큰이 없고 환경변수도 없으면 에러 반환
-        if not token and not os.environ.get("HF_TOKEN"):
+        # 토큰이 없으면 에러 반환
+        if not token:
             return {
                 "error": "Hugging Face 토큰이 필요합니다.",
                 "message": "Authorization 헤더(Bearer 토큰) 또는 hf_token 파라미터로 토큰을 전달해주세요.",

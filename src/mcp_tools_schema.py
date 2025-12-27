@@ -106,7 +106,7 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
                 },
                 "hf_token": {
                     "type": "string",
-                    "description": "Hugging Face API 토큰. Authorization 헤더로도 전달 가능"
+                    "description": "Hugging Face API 토큰 (필수). Authorization 헤더로도 전달 가능"
                 }
             },
             "required": ["emoticon_type", "emoticons"]

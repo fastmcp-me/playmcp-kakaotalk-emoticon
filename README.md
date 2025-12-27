@@ -86,9 +86,8 @@ PlayMCP에서 사용 시, PlayMCP의 인증 설정을 통해 토큰을 안전하
 |------|--------|------|
 | Authorization 헤더 | ⭐⭐⭐ | 토큰이 요청 본문에 노출되지 않음. PlayMCP 인증 시스템과 통합 가능 |
 | hf_token 파라미터 | ⭐⭐ | 토큰이 요청 본문에 포함됨. 헤더를 사용할 수 없는 경우에 사용 |
-| HF_TOKEN 환경변수 | ⭐ | 서버 기본값. 모든 사용자가 동일 토큰 사용. 개인 토큰 권장 |
 
-**토큰 우선순위**: Authorization 헤더 > hf_token 파라미터 > HF_TOKEN 환경변수
+**토큰 우선순위**: Authorization 헤더 > hf_token 파라미터
 
 ### Hugging Face 토큰 발급
 
@@ -105,17 +104,15 @@ PlayMCP에서 사용 시, PlayMCP의 인증 설정을 통해 토큰을 안전하
 pip install -r requirements.txt
 ```
 
-### 2. 환경 변수 설정
+### 2. 환경 변수 설정 (선택)
 ```bash
-# Hugging Face API 토큰 (서버 기본값으로 사용 - 선택)
-# 사용자별 토큰은 Authorization 헤더로 전달하는 것을 권장합니다
-export HF_TOKEN="your_huggingface_token"
-
 # 서버 설정 (선택)
 export HOST="0.0.0.0"
 export PORT="8000"
 export BASE_URL="https://your-server-url.com"
 ```
+
+> **참고**: Hugging Face 토큰은 환경 변수가 아닌, 사용자가 Authorization 헤더 또는 hf_token 파라미터로 전달해야 합니다.
 
 ### 3. 서버 실행
 ```bash
@@ -136,15 +133,14 @@ uvicorn server:app --host 0.0.0.0 --port 8000
 3. "Deploy from GitHub repo" 선택
 4. 이 레포지토리 선택
 
-### 2. 환경 변수 설정
-Railway 대시보드에서 Variables 탭에 다음 환경변수 추가:
+### 2. 환경 변수 설정 (선택)
+Railway 대시보드에서 Variables 탭에 다음 환경변수를 추가할 수 있습니다:
 
 | 변수명 | 설명 | 필수 |
 |---------|------|------|
-| `HF_TOKEN` | Hugging Face API 토큰 | ✅ |
 | `BASE_URL` | 배포된 서버 URL (Railway가 자동 생성) | ❌ |
 
-> **참고**: `PORT`는 Railway가 자동으로 설정합니다.
+> **참고**: `PORT`는 Railway가 자동으로 설정합니다. Hugging Face 토큰은 사용자가 직접 전달합니다.
 
 ### 3. 배포 확인
 - Railway가 자동으로 빌드 및 배포

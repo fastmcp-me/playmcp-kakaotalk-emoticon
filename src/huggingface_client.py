@@ -1,7 +1,6 @@
 """
 Hugging Face Inference API 클라이언트
 """
-import os
 import io
 import asyncio
 from typing import Optional
@@ -17,16 +16,16 @@ class HuggingFaceClient:
     IMAGE_TO_VIDEO_MODEL = "Wan-AI/Wan2.1-I2V-14B-480P"
     TEXT_TO_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str):
         """
         초기화
         
         Args:
-            api_key: Hugging Face API 키. None이면 환경변수 HF_TOKEN 사용
+            api_key: Hugging Face API 키 (필수)
         """
-        self.api_key = api_key or os.environ.get("HF_TOKEN")
-        if not self.api_key:
-            raise ValueError("HF_TOKEN 환경변수가 설정되지 않았습니다.")
+        if not api_key:
+            raise ValueError("Hugging Face API 토큰이 필요합니다. Authorization 헤더 또는 hf_token 파라미터로 전달해주세요.")
+        self.api_key = api_key
         
         self.client = InferenceClient(
             provider="auto",
@@ -153,6 +152,10 @@ class HuggingFaceClient:
         return video
 
 
-def get_hf_client(api_key: Optional[str] = None) -> HuggingFaceClient:
-    """HuggingFace 클라이언트 인스턴스 반환"""
+def get_hf_client(api_key: str) -> HuggingFaceClient:
+    """HuggingFace 클라이언트 인스턴스 반환
+    
+    Args:
+        api_key: Hugging Face API 키 (필수)
+    """
     return HuggingFaceClient(api_key=api_key)
