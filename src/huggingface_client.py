@@ -13,8 +13,8 @@ class HuggingFaceClient:
     
     # 기본 모델 설정
     IMAGE_EDIT_MODEL = "Qwen/Qwen-Image-Edit"
-    IMAGE_TO_VIDEO_MODEL = "Wan-AI/Wan2.1-I2V-14B-480P"
-    TEXT_TO_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"
+    IMAGE_TO_VIDEO_MODEL = "Lightricks/LTX-Video-0.9.8-13B-distilled"
+    TEXT_TO_IMAGE_MODEL = "Tongyi-MAI/Z-Image-Turbo"
     
     def __init__(self, api_key: str):
         """
