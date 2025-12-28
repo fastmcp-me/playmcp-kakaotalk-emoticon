@@ -216,8 +216,7 @@ class RedisStorage(BaseStorage):
                     
                     self._redis = aioredis.from_url(
                         self._redis_url,
-                        encoding=None,  # 바이너리 데이터 지원
-                        decode_responses=False,
+                        decode_responses=False,  # 바이너리 데이터 지원
                         retry_on_timeout=True,
                         socket_connect_timeout=5,
                         socket_timeout=10,
@@ -243,7 +242,7 @@ class RedisStorage(BaseStorage):
                     async with self._lock:
                         if self._redis:
                             try:
-                                await self._redis.close()
+                                await self._redis.aclose()
                             except Exception:
                                 pass
                             self._redis = None
@@ -302,7 +301,7 @@ class RedisStorage(BaseStorage):
         async with self._lock:
             if self._redis:
                 try:
-                    await self._redis.close()
+                    await self._redis.aclose()
                 except Exception:
                     pass
                 self._redis = None
