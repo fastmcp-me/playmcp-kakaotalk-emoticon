@@ -41,7 +41,7 @@ async def before_preview(request: BeforePreviewRequest) -> BeforePreviewResponse
         for plan in request.plans
     ]
     
-    preview_url = generator.generate_before_preview(
+    preview_url = await generator.generate_before_preview(
         emoticon_type=emoticon_type_str,
         title=request.title,
         plans=plans
@@ -77,7 +77,7 @@ async def generate_async(
     
     # 상태 확인 URL 생성
     generator = get_preview_generator(base_url)
-    status_url = generator.generate_status_page(task.task_id)
+    status_url = await generator.generate_status_page(task.task_id)
     
     # 백그라운드 작업 시작
     background_task = asyncio.create_task(
@@ -178,7 +178,7 @@ async def _run_generation_task(
             width, height, _ = get_image_info(image_bytes)
             size_kb = len(image_bytes) / 1024
             
-            image_url = generator.store_image(image_bytes, mime_type)
+            image_url = await generator.store_image(image_bytes, mime_type)
             emoticon_bytes_list.append(image_bytes)
             
             emoticon_data = {
@@ -202,7 +202,7 @@ async def _run_generation_task(
             icon_bytes = create_icon(character_bytes, spec)
         
         icon_width, icon_height, _ = get_image_info(icon_bytes)
-        icon_url = generator.store_image(icon_bytes, "image/png")
+        icon_url = await generator.store_image(icon_bytes, "image/png")
         
         icon_data = {
             "index": -1,
@@ -281,7 +281,7 @@ async def after_preview(request: AfterPreviewRequest) -> AfterPreviewResponse:
         for emoticon in request.emoticons
     ]
     
-    preview_url, download_url = generator.generate_after_preview(
+    preview_url, download_url = await generator.generate_after_preview(
         emoticon_type=emoticon_type_str,
         title=request.title,
         emoticons=emoticons,

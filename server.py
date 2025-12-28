@@ -136,7 +136,7 @@ async def get_preview(preview_id: str):
     from src.preview_generator import get_preview_generator
     
     generator = get_preview_generator(os.environ.get("BASE_URL", ""))
-    html = generator.get_preview_html(preview_id)
+    html = await generator.get_preview_html(preview_id)
     if html:
         return HTMLResponse(content=html)
     return HTMLResponse(content="Preview not found", status_code=404)
@@ -148,7 +148,7 @@ async def get_download(download_id: str):
     from src.preview_generator import get_preview_generator
     
     generator = get_preview_generator(os.environ.get("BASE_URL", ""))
-    zip_bytes = generator.get_download_zip(download_id)
+    zip_bytes = await generator.get_download_zip(download_id)
     if zip_bytes:
         return Response(
             content=zip_bytes,
@@ -164,7 +164,7 @@ async def get_image(image_id: str):
     from src.preview_generator import get_preview_generator
     
     generator = get_preview_generator(os.environ.get("BASE_URL", ""))
-    image_info = generator.get_image(image_id)
+    image_info = await generator.get_image(image_id)
     if image_info:
         return Response(
             content=image_info["data"],
@@ -179,13 +179,13 @@ async def get_status_page(task_id: str):
     from src.preview_generator import get_preview_generator
     
     generator = get_preview_generator(os.environ.get("BASE_URL", ""))
-    html = generator.get_status_html(task_id)
+    html = await generator.get_status_html(task_id)
     if html:
         return HTMLResponse(content=html)
     
     # 상태 페이지가 없으면 동적으로 생성
-    status_url = generator.generate_status_page(task_id)
-    html = generator.get_status_html(task_id)
+    status_url = await generator.generate_status_page(task_id)
+    html = await generator.get_status_html(task_id)
     if html:
         return HTMLResponse(content=html)
     

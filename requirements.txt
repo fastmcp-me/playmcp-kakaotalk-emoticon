@@ -16,3 +16,6 @@ Jinja2>=3.1.0
 # 유틸리티
 pydantic>=2.0.0
 python-multipart>=0.0.6
+
+# Redis (외부 저장소)
+redis>=5.0.0

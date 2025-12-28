@@ -89,6 +89,11 @@ pip install -r requirements.txt
 export HOST="0.0.0.0"
 export PORT="8000"
 export BASE_URL="https://your-server-url.com"
+
+# Redis 설정 (권장 - 설정하지 않으면 메모리 저장소 사용)
+export REDIS_URL="redis://localhost:6379"
+# 또는 비밀번호가 있는 경우:
+# export REDIS_URL="redis://:password@host:port"
 ```
 
 > **참고**: Hugging Face 토큰은 환경 변수가 아닌, 사용자가 Authorization 헤더 또는 hf_token 파라미터로 전달해야 합니다.
@@ -118,6 +123,7 @@ Railway 대시보드에서 Variables 탭에 다음 환경변수를 추가할 수
 | 변수명 | 설명 | 필수 |
 |---------|------|------|
 | `BASE_URL` | 배포된 서버 URL (Railway가 자동 생성) | ❌ |
+| `REDIS_URL` | Redis 연결 URL (권장 - 데이터 영속성) | ❌ |
 
 > **참고**: `PORT`는 Railway가 자동으로 설정합니다. Hugging Face 토큰은 사용자가 직접 전달합니다.
 

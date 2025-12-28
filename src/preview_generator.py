@@ -1,5 +1,8 @@
 """
 프리뷰 페이지 생성 모듈
+
+Redis를 사용하여 프리뷰, 이미지, ZIP 파일을 저장합니다.
+REDIS_URL이 설정되지 않은 경우 메모리 기반 저장소로 폴백합니다.
 """
 import secrets
 import string
@@ -10,6 +13,7 @@ from typing import List, Optional, Dict, Any
 from jinja2 import Template
 
 from src.constants import EMOTICON_SPECS, EMOTICON_TYPE_NAMES, EmoticonType, get_emoticon_spec
+from src.redis_client import get_storage, get_ttl, preview_key, image_key, zip_key, status_key
 
 
 # before-preview 템플릿 (기획 단계)
@@ -2349,7 +2353,7 @@ AFTER_PREVIEW_TEMPLATE = """
 
 
 class PreviewGenerator:
-    """프리뷰 페이지 생성기"""
+    """프리뷰 페이지 생성기 (Redis 기반)"""
     
     def __init__(self, base_url: str = ""):
         """
@@ -2359,9 +2363,7 @@ class PreviewGenerator:
             base_url: 생성된 프리뷰 페이지의 베이스 URL
         """
         self.base_url = base_url.rstrip("/")
-        self._storage: Dict[str, str] = {}  # preview_id -> HTML content
-        self._zip_storage: Dict[str, bytes] = {}  # download_id -> ZIP bytes
-        self._image_storage: Dict[str, Dict[str, Any]] = {}  # image_id -> {"data": bytes, "mime_type": str}
+        self._storage = get_storage()
     
     def _generate_short_id(self, length: int = 8) -> str:
         """
@@ -2376,7 +2378,7 @@ class PreviewGenerator:
         alphabet = string.ascii_letters + string.digits
         return ''.join(secrets.choice(alphabet) for _ in range(length))
     
-    def store_image(self, image_data: bytes, mime_type: str = "image/png") -> str:
+    async def store_image(self, image_data: bytes, mime_type: str = "image/png") -> str:
         """
         이미지를 저장하고 URL을 반환합니다.
         
@@ -2388,17 +2390,19 @@ class PreviewGenerator:
             이미지 URL (예: /image/{image_id} 또는 {base_url}/image/{image_id})
         """
         image_id = self._generate_short_id()
-        self._image_storage[image_id] = {
-            "data": image_data,
-            "mime_type": mime_type
-        }
+        ttl = get_ttl("image")
+        
+        # 이미지 데이터 저장 (바이너리)
+        await self._storage.set(image_key(image_id), image_data, ttl=ttl)
+        # 메타데이터 저장 (JSON)
+        await self._storage.set_json(f"{image_key(image_id)}:meta", {"mime_type": mime_type}, ttl=ttl)
         
         if self.base_url:
             return f"{self.base_url}/image/{image_id}"
         else:
             return f"/image/{image_id}"
     
-    def store_base64_image(self, base64_data: str) -> str:
+    async def store_base64_image(self, base64_data: str) -> str:
         """
         Base64 인코딩된 이미지를 저장하고 URL을 반환합니다.
         
@@ -2417,9 +2421,9 @@ class PreviewGenerator:
             mime_type = "image/png"
         
         image_bytes = base64.b64decode(data)
-        return self.store_image(image_bytes, mime_type)
+        return await self.store_image(image_bytes, mime_type)
     
-    def get_image(self, image_id: str) -> Optional[Dict[str, Any]]:
+    async def get_image(self, image_id: str) -> Optional[Dict[str, Any]]:
         """
         저장된 이미지 정보 반환
         
@@ -2429,9 +2433,18 @@ class PreviewGenerator:
         Returns:
             {"data": bytes, "mime_type": str} 또는 None
         """
-        return self._image_storage.get(image_id)
+        # 이미지 데이터 조회
+        data = await self._storage.get(image_key(image_id))
+        if data is None:
+            return None
+        
+        # 메타데이터 조회
+        meta = await self._storage.get_json(f"{image_key(image_id)}:meta")
+        mime_type = meta.get("mime_type", "image/png") if meta else "image/png"
+        
+        return {"data": data, "mime_type": mime_type}
     
-    def generate_status_page(self, task_id: str) -> str:
+    async def generate_status_page(self, task_id: str) -> str:
         """
         생성 작업 상태 페이지 URL 생성
         
@@ -2444,21 +2457,22 @@ class PreviewGenerator:
         template = Template(STATUS_PAGE_TEMPLATE)
         html_content = template.render(task_id=task_id)
         
-        # 상태 페이지는 task_id를 키로 저장 (status_ 접두사 사용)
-        status_key = f"status_{task_id}"
-        self._storage[status_key] = html_content
+        # 상태 페이지 저장
+        await self._storage.set(status_key(task_id), html_content.encode('utf-8'), ttl=get_ttl("status"))
         
         if self.base_url:
             return f"{self.base_url}/status/{task_id}"
         else:
             return f"/status/{task_id}"
     
-    def get_status_html(self, task_id: str) -> Optional[str]:
+    async def get_status_html(self, task_id: str) -> Optional[str]:
         """저장된 상태 페이지 HTML 반환"""
-        status_key = f"status_{task_id}"
-        return self._storage.get(status_key)
+        data = await self._storage.get(status_key(task_id))
+        if data:
+            return data.decode('utf-8')
+        return None
     
-    def generate_before_preview(
+    async def generate_before_preview(
         self,
         emoticon_type: EmoticonType | str,
         title: str,
@@ -2494,14 +2508,14 @@ class PreviewGenerator:
         )
         
         preview_id = self._generate_short_id()
-        self._storage[preview_id] = html_content
+        await self._storage.set(preview_key(preview_id), html_content.encode('utf-8'), ttl=get_ttl("preview"))
         
         if self.base_url:
             return f"{self.base_url}/preview/{preview_id}"
         else:
             return f"/preview/{preview_id}"
     
-    def generate_after_preview(
+    async def generate_after_preview(
         self,
         emoticon_type: EmoticonType | str,
         title: str,
@@ -2530,8 +2544,8 @@ class PreviewGenerator:
         
         # ZIP 파일 생성
         download_id = self._generate_short_id()
-        zip_bytes = self._create_zip(emoticons, icon, spec.format.lower())
-        self._zip_storage[download_id] = zip_bytes
+        zip_bytes = await self._create_zip(emoticons, icon, spec.format.lower())
+        await self._storage.set(zip_key(download_id), zip_bytes, ttl=get_ttl("zip"))
         
         if self.base_url:
             download_url = f"{self.base_url}/download/{download_id}"
@@ -2550,7 +2564,7 @@ class PreviewGenerator:
         )
         
         preview_id = self._generate_short_id()
-        self._storage[preview_id] = html_content
+        await self._storage.set(preview_key(preview_id), html_content.encode('utf-8'), ttl=get_ttl("preview"))
         
         if self.base_url:
             preview_url = f"{self.base_url}/preview/{preview_id}"
@@ -2559,7 +2573,7 @@ class PreviewGenerator:
         
         return preview_url, download_url
     
-    def _get_image_bytes_from_ref(self, image_ref: str) -> Optional[bytes]:
+    async def _get_image_bytes_from_ref(self, image_ref: str) -> Optional[bytes]:
         """
         이미지 참조(서버 URL, data URL, 또는 base64)에서 바이트를 추출합니다.
         
@@ -2576,7 +2590,7 @@ class PreviewGenerator:
         if "/image/" in image_ref:
             # URL에서 image_id 추출
             image_id = image_ref.split("/image/")[-1].split("?")[0].split("#")[0]
-            image_info = self.get_image(image_id)
+            image_info = await self.get_image(image_id)
             if image_info:
                 return image_info["data"]
             return None
@@ -2592,7 +2606,7 @@ class PreviewGenerator:
         except Exception:
             return None
     
-    def _create_zip(
+    async def _create_zip(
         self,
         emoticons: List[Dict[str, Any]],
         icon: Optional[str],
@@ -2604,25 +2618,28 @@ class PreviewGenerator:
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
             for idx, emoticon in enumerate(emoticons, 1):
                 image_data = emoticon.get("image_data", "")
-                image_bytes = self._get_image_bytes_from_ref(image_data)
+                image_bytes = await self._get_image_bytes_from_ref(image_data)
                 if image_bytes:
                     filename = f"emoticon_{idx:02d}.{file_format}"
                     zf.writestr(filename, image_bytes)
             
             if icon:
-                icon_bytes = self._get_image_bytes_from_ref(icon)
+                icon_bytes = await self._get_image_bytes_from_ref(icon)
                 if icon_bytes:
                     zf.writestr("icon.png", icon_bytes)
         
         return zip_buffer.getvalue()
     
-    def get_preview_html(self, preview_id: str) -> Optional[str]:
+    async def get_preview_html(self, preview_id: str) -> Optional[str]:
         """저장된 프리뷰 HTML 반환"""
-        return self._storage.get(preview_id)
+        data = await self._storage.get(preview_key(preview_id))
+        if data:
+            return data.decode('utf-8')
+        return None
     
-    def get_download_zip(self, download_id: str) -> Optional[bytes]:
+    async def get_download_zip(self, download_id: str) -> Optional[bytes]:
         """저장된 ZIP 파일 반환"""
-        return self._zip_storage.get(download_id)
+        return await self._storage.get(zip_key(download_id))
 
 
 # 전역 인스턴스
