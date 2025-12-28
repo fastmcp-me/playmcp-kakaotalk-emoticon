@@ -16,6 +16,10 @@ class HuggingFaceClient:
     IMAGE_TO_VIDEO_MODEL = "Lightricks/LTX-Video-0.9.8-13B-distilled"
     TEXT_TO_IMAGE_MODEL = "Tongyi-MAI/Z-Image-Turbo"
     
+    # 타임아웃 설정 (connect_timeout, read_timeout)
+    # 연결: 30초, 읽기: 5분 (이미지/비디오 생성은 시간이 오래 걸릴 수 있음)
+    DEFAULT_TIMEOUT = (30, 300)
+    
     def __init__(self, api_key: str):
         """
         초기화
@@ -30,6 +34,7 @@ class HuggingFaceClient:
         self.client = InferenceClient(
             provider="auto",
             api_key=self.api_key,
+            timeout=self.DEFAULT_TIMEOUT,
         )
     
     async def generate_character(self, prompt: str) -> bytes:
