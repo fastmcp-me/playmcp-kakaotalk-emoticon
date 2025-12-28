@@ -166,6 +166,7 @@ BEFORE_PREVIEW_TEMPLATE = """
             margin-top: 4px;
         }
         .input-wrapper {
+            position: relative;
             background-color: var(--bg-secondary);
             border-top: 1px solid var(--border-color);
             z-index: 100;
@@ -281,32 +282,34 @@ BEFORE_PREVIEW_TEMPLATE = """
             background-color: var(--border-color);
             border-radius: 2px;
         }
-        .panel-search {
+        .panel-category-bar {
             display: flex;
             align-items: center;
+            justify-content: center;
             margin: 0 12px 12px;
-            padding: 8px 12px;
+            padding: 4px;
             background-color: var(--bg-tertiary);
-            border-radius: 8px;
-            gap: 8px;
+            border-radius: 20px;
+            gap: 2px;
+            width: fit-content;
         }
-        .panel-search-icon {
-            color: var(--text-muted);
-            font-size: 14px;
-        }
-        .panel-search input {
-            flex: 1;
+        .panel-category-btn {
+            padding: 6px 12px;
             border: none;
             background: transparent;
-            color: var(--text-primary);
-            font-size: 13px;
-            outline: none;
-        }
-        .panel-search input::placeholder {
             color: var(--text-muted);
+            font-size: 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
         }
-        .panel-search-emoji {
-            font-size: 16px;
+        .panel-category-btn:hover {
+            color: var(--text-secondary);
+        }
+        .panel-category-btn.active {
+            background-color: #fff;
+            color: #000;
         }
         .panel-tabs {
             display: flex;
@@ -322,7 +325,7 @@ BEFORE_PREVIEW_TEMPLATE = """
             border: none;
             background: transparent;
             color: var(--text-muted);
-            font-size: 14px;
+            font-size: 12px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -334,6 +337,12 @@ BEFORE_PREVIEW_TEMPLATE = """
         .panel-tab.active {
             background-color: var(--bg-tertiary);
             color: var(--text-primary);
+        }
+        .panel-tab-stacked {
+            flex-direction: column;
+            gap: 2px;
+            font-size: 10px;
+            line-height: 1;
         }
         .panel-tab-all {
             padding: 4px 8px;
@@ -416,99 +425,80 @@ BEFORE_PREVIEW_TEMPLATE = """
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
         }
-        .selection-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-        }
-        .selection-overlay.active {
-            display: flex;
-        }
         .selection-popup {
-            position: relative;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 16px;
+            padding: 12px;
+            display: none;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 8px;
+            z-index: 150;
+        }
+        .selection-popup.active {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 60px 40px 20px;
         }
         .selection-star {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 36px;
-            height: 36px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             border: none;
             background: transparent;
-            color: #fff;
-            font-size: 20px;
+            color: var(--text-muted);
+            font-size: 16px;
             cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 4px;
         }
         .selection-star.filled {
             color: var(--kakao-yellow);
         }
-        .selection-close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: none;
-            background: transparent;
-            color: #fff;
-            font-size: 24px;
-            cursor: pointer;
-        }
         .selection-emoticon {
-            width: 150px;
-            height: 150px;
+            width: 100px;
+            height: 100px;
             background-color: var(--bg-tertiary);
-            border-radius: 20px;
+            border-radius: 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
         }
         .selection-emoticon-number {
-            font-size: 48px;
+            font-size: 36px;
             font-weight: 700;
             color: var(--kakao-yellow);
         }
         .selection-emoticon-desc {
-            font-size: 12px;
+            font-size: 10px;
             color: var(--text-muted);
             text-align: center;
-            margin-top: 8px;
-            padding: 0 12px;
+            margin-top: 4px;
+            padding: 0 8px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-        .selection-send-btn {
-            width: 50px;
-            height: 50px;
+        .selection-close {
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             border: none;
-            background-color: var(--kakao-yellow);
-            color: var(--kakao-brown);
-            font-size: 22px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 18px;
             cursor: pointer;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
-            transition: transform 0.15s;
-        }
-        .selection-send-btn:hover {
-            transform: scale(1.1);
-        }
-        .selection-send-btn:active {
-            transform: scale(0.95);
+            padding-top: 4px;
         }
         .info-toggle {
             padding: 8px 16px;
@@ -563,20 +553,26 @@ BEFORE_PREVIEW_TEMPLATE = """
             <div class="header-title">{{ title }}</div>
             <div class="header-actions">
                 <span class="badge">기획</span>
-                <button class="mode-toggle" id="modeToggle" title="다크/라이트 모드 전환">
-                    🌙
-                </button>
+                <button class="mode-toggle" id="modeToggle" title="다크/라이트 모드 전환">☽</button>
             </div>
         </div>
         
         <div class="chat-area" id="chatArea"></div>
         
         <div class="input-wrapper" id="inputWrapper">
+            <div class="selection-popup" id="selectionPopup">
+                <button class="selection-star" id="selectionStar">☆</button>
+                <div class="selection-emoticon" id="selectionEmoticon">
+                    <span class="selection-emoticon-number" id="selectionNumber"></span>
+                    <span class="selection-emoticon-desc" id="selectionDesc"></span>
+                </div>
+                <button class="selection-close" id="selectionClose">✕</button>
+            </div>
             <div class="input-bar">
                 <button class="input-btn" id="addBtn">+</button>
                 <div class="input-field-wrapper">
                     <input type="text" class="input-field" id="messageInput" placeholder="메시지 입력">
-                    <button class="emoji-btn" id="emojiBtn">😊</button>
+                    <button class="emoji-btn" id="emojiBtn">☺︎</button>
                 </div>
                 <button class="send-btn" id="sendBtn">#</button>
             </div>
@@ -587,18 +583,17 @@ BEFORE_PREVIEW_TEMPLATE = """
                 <div class="panel-drag-bar"></div>
             </div>
             
-            <div class="panel-search">
-                <span class="panel-search-icon">🔍</span>
-                <input type="text" placeholder="검색">
-                <span class="panel-search-emoji">😊</span>
+            <div class="panel-category-bar">
+                <button class="panel-category-btn">검색</button>
+                <button class="panel-category-btn active">이모티콘</button>
+                <button class="panel-category-btn">미니 이모티콘</button>
             </div>
             
             <div class="panel-tabs">
-                <button class="panel-tab">🕐</button>
-                <button class="panel-tab">⭐</button>
+                <button class="panel-tab panel-tab-stacked"><span>○</span><span>☆</span></button>
                 <div class="panel-tab-divider"></div>
                 <button class="panel-tab panel-tab-all">ALL</button>
-                <button class="panel-tab active" id="emoticonTabBtn">😊</button>
+                <button class="panel-tab active" id="emoticonTabBtn">☺︎</button>
             </div>
             
             <div class="panel-title-row">
@@ -641,21 +636,7 @@ BEFORE_PREVIEW_TEMPLATE = """
         </div>
     </div>
     
-    <div class="selection-overlay" id="selectionOverlay">
-        <div class="selection-popup">
-            <button class="selection-star" id="selectionStar">☆</button>
-            <button class="selection-close" id="selectionClose">✕</button>
-            <div class="selection-emoticon" id="selectionEmoticon">
-                <span class="selection-emoticon-number" id="selectionNumber"></span>
-                <span class="selection-emoticon-desc" id="selectionDesc"></span>
-            </div>
-            <button class="selection-send-btn" id="selectionSendBtn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                </svg>
-            </button>
-        </div>
-    </div>
+
     
     <script>
         const chatContainer = document.getElementById('chatContainer');
@@ -667,12 +648,11 @@ BEFORE_PREVIEW_TEMPLATE = """
         const emoticonPanel = document.getElementById('emoticonPanel');
         const dragHandle = document.getElementById('dragHandle');
         const emoticonGrid = document.getElementById('emoticonGrid');
-        const selectionOverlay = document.getElementById('selectionOverlay');
+        const selectionPopup = document.getElementById('selectionPopup');
         const selectionNumber = document.getElementById('selectionNumber');
         const selectionDesc = document.getElementById('selectionDesc');
         const selectionStar = document.getElementById('selectionStar');
         const selectionClose = document.getElementById('selectionClose');
-        const selectionSendBtn = document.getElementById('selectionSendBtn');
         const modeToggle = document.getElementById('modeToggle');
         const infoToggleBtn = document.getElementById('infoToggleBtn');
         const infoSection = document.getElementById('infoSection');
@@ -684,26 +664,33 @@ BEFORE_PREVIEW_TEMPLATE = """
         let startY = 0;
         let panelHeight = 0;
         
-        // Send button state
-        messageInput.addEventListener('input', () => {
-            if (messageInput.value.trim()) {
+        // Update send button state
+        function updateSendButton() {
+            if (messageInput.value.trim() || selectedEmoticon) {
                 sendBtn.classList.add('active');
                 sendBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
             } else {
                 sendBtn.classList.remove('active');
                 sendBtn.textContent = '#';
             }
-        });
+        }
         
-        // Send message
+        messageInput.addEventListener('input', updateSendButton);
+        
+        // Send message or emoticon
         function sendMessage() {
+            if (selectedEmoticon) {
+                addMessage(`[${selectedEmoticon.index}]`, 'emoticon', selectedEmoticon.desc);
+                closeSelection();
+                return;
+            }
+            
             const text = messageInput.value.trim();
             if (!text) return;
             
             addMessage(text, 'text');
             messageInput.value = '';
-            sendBtn.classList.remove('active');
-            sendBtn.textContent = '#';
+            updateSendButton();
         }
         
         sendBtn.addEventListener('click', sendMessage);
@@ -752,8 +739,8 @@ BEFORE_PREVIEW_TEMPLATE = """
             emojiBtn.classList.toggle('active', isPanelOpen);
             
             if (!isPanelOpen) {
-                // Reset custom height when closing
                 emoticonPanel.style.maxHeight = '';
+                closeSelection();
             }
         });
         
@@ -769,37 +756,26 @@ BEFORE_PREVIEW_TEMPLATE = """
             
             selectionNumber.textContent = selectedEmoticon.index;
             selectionDesc.textContent = selectedEmoticon.desc;
-            selectionOverlay.classList.add('active');
+            selectionPopup.classList.add('active');
             isStarred = false;
             selectionStar.textContent = '☆';
             selectionStar.classList.remove('filled');
+            updateSendButton();
         });
         
-        // Selection overlay controls
-        selectionClose.addEventListener('click', () => {
-            selectionOverlay.classList.remove('active');
+        function closeSelection() {
+            selectionPopup.classList.remove('active');
             selectedEmoticon = null;
-        });
+            updateSendButton();
+        }
+        
+        // Selection popup controls
+        selectionClose.addEventListener('click', closeSelection);
         
         selectionStar.addEventListener('click', () => {
             isStarred = !isStarred;
             selectionStar.textContent = isStarred ? '★' : '☆';
             selectionStar.classList.toggle('filled', isStarred);
-        });
-        
-        selectionSendBtn.addEventListener('click', () => {
-            if (selectedEmoticon) {
-                addMessage(`[${selectedEmoticon.index}]`, 'emoticon', selectedEmoticon.desc);
-                selectionOverlay.classList.remove('active');
-                selectedEmoticon = null;
-            }
-        });
-        
-        selectionOverlay.addEventListener('click', (e) => {
-            if (e.target === selectionOverlay) {
-                selectionOverlay.classList.remove('active');
-                selectedEmoticon = null;
-            }
         });
         
         // Drag handle for panel resize
@@ -836,7 +812,7 @@ BEFORE_PREVIEW_TEMPLATE = """
         // Mode toggle
         modeToggle.addEventListener('click', () => {
             chatContainer.classList.toggle('light-mode');
-            modeToggle.textContent = chatContainer.classList.contains('light-mode') ? '☀️' : '🌙';
+            modeToggle.textContent = chatContainer.classList.contains('light-mode') ? '☼' : '☽';
         });
         
         // Info toggle
@@ -1017,6 +993,7 @@ AFTER_PREVIEW_TEMPLATE = """
             margin-top: 4px;
         }
         .input-wrapper {
+            position: relative;
             background-color: var(--bg-secondary);
             border-top: 1px solid var(--border-color);
             z-index: 100;
@@ -1132,32 +1109,34 @@ AFTER_PREVIEW_TEMPLATE = """
             background-color: var(--border-color);
             border-radius: 2px;
         }
-        .panel-search {
+        .panel-category-bar {
             display: flex;
             align-items: center;
+            justify-content: center;
             margin: 0 12px 12px;
-            padding: 8px 12px;
+            padding: 4px;
             background-color: var(--bg-tertiary);
-            border-radius: 8px;
-            gap: 8px;
+            border-radius: 20px;
+            gap: 2px;
+            width: fit-content;
         }
-        .panel-search-icon {
-            color: var(--text-muted);
-            font-size: 14px;
-        }
-        .panel-search input {
-            flex: 1;
+        .panel-category-btn {
+            padding: 6px 12px;
             border: none;
             background: transparent;
-            color: var(--text-primary);
-            font-size: 13px;
-            outline: none;
-        }
-        .panel-search input::placeholder {
             color: var(--text-muted);
+            font-size: 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
         }
-        .panel-search-emoji {
-            font-size: 16px;
+        .panel-category-btn:hover {
+            color: var(--text-secondary);
+        }
+        .panel-category-btn.active {
+            background-color: #fff;
+            color: #000;
         }
         .panel-tabs {
             display: flex;
@@ -1173,7 +1152,7 @@ AFTER_PREVIEW_TEMPLATE = """
             border: none;
             background: transparent;
             color: var(--text-muted);
-            font-size: 14px;
+            font-size: 12px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -1185,6 +1164,12 @@ AFTER_PREVIEW_TEMPLATE = """
         .panel-tab.active {
             background-color: var(--bg-tertiary);
             color: var(--text-primary);
+        }
+        .panel-tab-stacked {
+            flex-direction: column;
+            gap: 2px;
+            font-size: 10px;
+            line-height: 1;
         }
         .panel-tab-all {
             padding: 4px 8px;
@@ -1265,92 +1250,69 @@ AFTER_PREVIEW_TEMPLATE = """
             max-height: 100%;
             object-fit: contain;
         }
-        .selection-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-        }
-        .selection-overlay.active {
-            display: flex;
-        }
         .selection-popup {
-            position: relative;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 16px;
+            padding: 12px;
+            display: none;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 8px;
+            z-index: 150;
+        }
+        .selection-popup.active {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 60px 40px 20px;
         }
         .selection-star {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 36px;
-            height: 36px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             border: none;
             background: transparent;
-            color: #fff;
-            font-size: 20px;
+            color: var(--text-muted);
+            font-size: 16px;
             cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 4px;
         }
         .selection-star.filled {
             color: var(--kakao-yellow);
         }
-        .selection-close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: none;
-            background: transparent;
-            color: #fff;
-            font-size: 24px;
-            cursor: pointer;
-        }
         .selection-emoticon {
-            width: 150px;
-            height: 150px;
+            width: 100px;
+            height: 100px;
             background-color: var(--bg-tertiary);
-            border-radius: 20px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
-            padding: 12px;
+            padding: 8px;
         }
         .selection-emoticon img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
         }
-        .selection-send-btn {
-            width: 50px;
-            height: 50px;
+        .selection-close {
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             border: none;
-            background-color: var(--kakao-yellow);
-            color: var(--kakao-brown);
-            font-size: 22px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 18px;
             cursor: pointer;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
-            transition: transform 0.15s;
-        }
-        .selection-send-btn:hover {
-            transform: scale(1.1);
-        }
-        .selection-send-btn:active {
-            transform: scale(0.95);
+            padding-top: 4px;
         }
         .info-toggle {
             padding: 8px 16px;
@@ -1405,9 +1367,7 @@ AFTER_PREVIEW_TEMPLATE = """
             <div class="header-title">{{ title }}</div>
             <div class="header-actions">
                 <span class="badge">완성</span>
-                <button class="mode-toggle" id="modeToggle" title="다크/라이트 모드 전환">
-                    🌙
-                </button>
+                <button class="mode-toggle" id="modeToggle" title="다크/라이트 모드 전환">☽</button>
             </div>
         </div>
         
@@ -1418,11 +1378,18 @@ AFTER_PREVIEW_TEMPLATE = """
         </div>
         
         <div class="input-wrapper" id="inputWrapper">
+            <div class="selection-popup" id="selectionPopup">
+                <button class="selection-star" id="selectionStar">☆</button>
+                <div class="selection-emoticon" id="selectionEmoticon">
+                    <img src="" alt="" id="selectionImage">
+                </div>
+                <button class="selection-close" id="selectionClose">✕</button>
+            </div>
             <div class="input-bar">
                 <button class="input-btn" id="addBtn">+</button>
                 <div class="input-field-wrapper">
                     <input type="text" class="input-field" id="messageInput" placeholder="메시지 입력">
-                    <button class="emoji-btn" id="emojiBtn">😊</button>
+                    <button class="emoji-btn" id="emojiBtn">☺︎</button>
                 </div>
                 <button class="send-btn" id="sendBtn">#</button>
             </div>
@@ -1433,15 +1400,14 @@ AFTER_PREVIEW_TEMPLATE = """
                 <div class="panel-drag-bar"></div>
             </div>
             
-            <div class="panel-search">
-                <span class="panel-search-icon">🔍</span>
-                <input type="text" placeholder="검색">
-                <span class="panel-search-emoji">😊</span>
+            <div class="panel-category-bar">
+                <button class="panel-category-btn">검색</button>
+                <button class="panel-category-btn active">이모티콘</button>
+                <button class="panel-category-btn">미니 이모티콘</button>
             </div>
             
             <div class="panel-tabs">
-                <button class="panel-tab">🕐</button>
-                <button class="panel-tab">⭐</button>
+                <button class="panel-tab panel-tab-stacked"><span>○</span><span>☆</span></button>
                 <div class="panel-tab-divider"></div>
                 <button class="panel-tab panel-tab-all">ALL</button>
                 {% if icon %}
@@ -1449,7 +1415,7 @@ AFTER_PREVIEW_TEMPLATE = """
                     <img src="{{ icon }}" alt="" class="panel-tab-icon">
                 </button>
                 {% else %}
-                <button class="panel-tab active" id="emoticonTabBtn">😊</button>
+                <button class="panel-tab active" id="emoticonTabBtn">☺︎</button>
                 {% endif %}
             </div>
             
@@ -1487,21 +1453,6 @@ AFTER_PREVIEW_TEMPLATE = """
         </div>
     </div>
     
-    <div class="selection-overlay" id="selectionOverlay">
-        <div class="selection-popup">
-            <button class="selection-star" id="selectionStar">☆</button>
-            <button class="selection-close" id="selectionClose">✕</button>
-            <div class="selection-emoticon" id="selectionEmoticon">
-                <img src="" alt="" id="selectionImage">
-            </div>
-            <button class="selection-send-btn" id="selectionSendBtn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                </svg>
-            </button>
-        </div>
-    </div>
-    
     <script>
         const chatContainer = document.getElementById('chatContainer');
         const chatArea = document.getElementById('chatArea');
@@ -1512,11 +1463,10 @@ AFTER_PREVIEW_TEMPLATE = """
         const emoticonPanel = document.getElementById('emoticonPanel');
         const dragHandle = document.getElementById('dragHandle');
         const emoticonGrid = document.getElementById('emoticonGrid');
-        const selectionOverlay = document.getElementById('selectionOverlay');
+        const selectionPopup = document.getElementById('selectionPopup');
         const selectionImage = document.getElementById('selectionImage');
         const selectionStar = document.getElementById('selectionStar');
         const selectionClose = document.getElementById('selectionClose');
-        const selectionSendBtn = document.getElementById('selectionSendBtn');
         const modeToggle = document.getElementById('modeToggle');
         const infoToggleBtn = document.getElementById('infoToggleBtn');
         const infoSection = document.getElementById('infoSection');
@@ -1528,26 +1478,33 @@ AFTER_PREVIEW_TEMPLATE = """
         let startY = 0;
         let panelHeight = 0;
         
-        // Send button state
-        messageInput.addEventListener('input', () => {
-            if (messageInput.value.trim()) {
+        // Update send button state
+        function updateSendButton() {
+            if (messageInput.value.trim() || selectedEmoticon) {
                 sendBtn.classList.add('active');
                 sendBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
             } else {
                 sendBtn.classList.remove('active');
                 sendBtn.textContent = '#';
             }
-        });
+        }
         
-        // Send message
+        messageInput.addEventListener('input', updateSendButton);
+        
+        // Send message or emoticon
         function sendMessage() {
+            if (selectedEmoticon) {
+                addMessage('', 'emoticon', selectedEmoticon.src);
+                closeSelection();
+                return;
+            }
+            
             const text = messageInput.value.trim();
             if (!text) return;
             
             addMessage(text, 'text');
             messageInput.value = '';
-            sendBtn.classList.remove('active');
-            sendBtn.textContent = '#';
+            updateSendButton();
         }
         
         sendBtn.addEventListener('click', sendMessage);
@@ -1595,8 +1552,8 @@ AFTER_PREVIEW_TEMPLATE = """
             emojiBtn.classList.toggle('active', isPanelOpen);
             
             if (!isPanelOpen) {
-                // Reset custom height when closing
                 emoticonPanel.style.maxHeight = '';
+                closeSelection();
             }
         });
         
@@ -1611,37 +1568,26 @@ AFTER_PREVIEW_TEMPLATE = """
             };
             
             selectionImage.src = selectedEmoticon.src;
-            selectionOverlay.classList.add('active');
+            selectionPopup.classList.add('active');
             isStarred = false;
             selectionStar.textContent = '☆';
             selectionStar.classList.remove('filled');
+            updateSendButton();
         });
         
-        // Selection overlay controls
-        selectionClose.addEventListener('click', () => {
-            selectionOverlay.classList.remove('active');
+        function closeSelection() {
+            selectionPopup.classList.remove('active');
             selectedEmoticon = null;
-        });
+            updateSendButton();
+        }
+        
+        // Selection popup controls
+        selectionClose.addEventListener('click', closeSelection);
         
         selectionStar.addEventListener('click', () => {
             isStarred = !isStarred;
             selectionStar.textContent = isStarred ? '★' : '☆';
             selectionStar.classList.toggle('filled', isStarred);
-        });
-        
-        selectionSendBtn.addEventListener('click', () => {
-            if (selectedEmoticon) {
-                addMessage('', 'emoticon', selectedEmoticon.src);
-                selectionOverlay.classList.remove('active');
-                selectedEmoticon = null;
-            }
-        });
-        
-        selectionOverlay.addEventListener('click', (e) => {
-            if (e.target === selectionOverlay) {
-                selectionOverlay.classList.remove('active');
-                selectedEmoticon = null;
-            }
         });
         
         // Drag handle for panel resize
@@ -1678,7 +1624,7 @@ AFTER_PREVIEW_TEMPLATE = """
         // Mode toggle
         modeToggle.addEventListener('click', () => {
             chatContainer.classList.toggle('light-mode');
-            modeToggle.textContent = chatContainer.classList.contains('light-mode') ? '☀️' : '🌙';
+            modeToggle.textContent = chatContainer.classList.contains('light-mode') ? '☼' : '☽';
         });
         
         // Info toggle
