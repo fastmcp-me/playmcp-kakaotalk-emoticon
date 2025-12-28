@@ -23,7 +23,9 @@ _mcp_transport_type = None
 def _extract_hf_token_from_headers() -> Optional[str]:
     """
     HTTP 헤더에서 Hugging Face 토큰을 추출합니다.
-    Authorization: Bearer <token> 형식을 지원합니다.
+    다음 헤더를 순서대로 확인합니다:
+    - Authorization: Bearer <token>
+    - hf_token, hf-token, x-hf-token, token
     
     Returns:
         추출된 토큰 또는 None
@@ -31,18 +33,28 @@ def _extract_hf_token_from_headers() -> Optional[str]:
     try:
         from fastmcp.server.dependencies import get_http_headers
         headers = get_http_headers()
-        if headers:
-            # case-insensitive 헤더 검색
-            auth_header = None
-            for key, value in headers.items():
-                if key.lower() == "authorization":
-                    auth_header = value
-                    break
-            
-            if auth_header and auth_header.lower().startswith("bearer "):
-                return auth_header[7:].strip()  # "Bearer " 이후의 토큰 부분 추출
+        if not headers:
+            return None
+        
+        # case-insensitive 헤더 맵 생성
+        lower_headers = {k.lower(): v for k, v in headers.items()}
+        
+        # 1. Authorization 헤더 확인 (Bearer 형식)
+        auth_header = lower_headers.get("authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            return auth_header[7:].strip()
+        
+        # 2. 커스텀 헤더 확인 (우선순위 순)
+        custom_header_names = ["hf_token", "hf-token", "x-hf-token", "token"]
+        for header_name in custom_header_names:
+            token = lower_headers.get(header_name.lower())
+            if token:
+                token = token.strip()
+                if token.lower().startswith("bearer "):
+                    token = token[7:].strip()
+                return token
+        
     except Exception:
-        # 헤더를 가져올 수 없는 경우 (예: HTTP 컨텍스트가 아닌 경우)
         pass
     return None
 
