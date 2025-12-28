@@ -18,9 +18,35 @@ BEFORE_PREVIEW_TEMPLATE = """
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ title }} - 이모티콘 기획 프리뷰</title>
     <style>
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --bg-input: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #999999;
+            --text-muted: #666666;
+            --border-color: #333333;
+            --kakao-yellow: #fee500;
+            --kakao-brown: #3c1e1e;
+            --bubble-mine: #fee500;
+            --bubble-mine-text: #3c1e1e;
+        }
+        .light-mode {
+            --bg-primary: #b2c7d9;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f5f5f5;
+            --bg-input: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --border-color: #e5e5e5;
+            --bubble-mine: #fee500;
+            --bubble-mine-text: #3c1e1e;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -28,76 +54,334 @@ BEFORE_PREVIEW_TEMPLATE = """
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #b2c7d9;
+            background-color: #000;
             min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            height: 100dvh;
+            background-color: var(--bg-primary);
             display: flex;
             flex-direction: column;
+            position: relative;
+            overflow: hidden;
         }
         .header {
-            background-color: #fff;
+            background-color: var(--bg-secondary);
             padding: 12px 16px;
             display: flex;
             align-items: center;
-            border-bottom: 1px solid #e5e5e5;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+        }
+        .header-back {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            cursor: pointer;
         }
         .header-title {
             font-size: 16px;
             font-weight: 600;
-            color: #333;
+            color: var(--text-primary);
             flex: 1;
             text-align: center;
         }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
         .badge {
-            background-color: #fee500;
-            color: #3c1e1e;
+            background-color: var(--kakao-yellow);
+            color: var(--kakao-brown);
             padding: 4px 8px;
             border-radius: 12px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
+        }
+        .mode-toggle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            font-size: 14px;
         }
         .chat-area {
             flex: 1;
             padding: 16px;
             overflow-y: auto;
-        }
-        .emoticon-panel {
-            background-color: #fff;
-            border-radius: 16px;
-            margin-top: auto;
-            max-height: 60vh;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
+            gap: 8px;
         }
-        .panel-header {
-            padding: 16px;
-            border-bottom: 1px solid #f0f0f0;
+        .message {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            max-width: 80%;
+            margin-left: auto;
+        }
+        .message-bubble {
+            background-color: var(--bubble-mine);
+            color: var(--bubble-mine-text);
+            padding: 10px 14px;
+            border-radius: 16px 16px 4px 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .message-emoticon {
+            background: transparent;
+            padding: 4px;
+        }
+        .message-emoticon-content {
+            font-size: 64px;
+            line-height: 1;
+        }
+        .message-emoticon-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 4px;
+        }
+        .message-time {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .input-wrapper {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            z-index: 100;
+        }
+        .input-bar {
             display: flex;
             align-items: center;
+            padding: 8px 12px;
+            gap: 8px;
+        }
+        .input-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .input-btn:hover {
+            background-color: var(--border-color);
+        }
+        .input-field-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 0 4px 0 14px;
+            min-height: 40px;
+        }
+        .input-field {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            padding: 8px 0;
+        }
+        .input-field::placeholder {
+            color: var(--text-muted);
+        }
+        .emoji-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .emoji-btn:hover {
+            background-color: var(--bg-tertiary);
+        }
+        .emoji-btn.active {
+            color: var(--kakao-yellow);
+        }
+        .send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .send-btn.active {
+            background-color: var(--kakao-yellow);
+            color: var(--kakao-brown);
+        }
+        .emoticon-panel {
+            background-color: var(--bg-secondary);
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            flex-direction: column;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .emoticon-panel.open {
+            max-height: 60vh;
+        }
+        .panel-drag-handle {
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            cursor: grab;
+        }
+        .panel-drag-handle:active {
+            cursor: grabbing;
+        }
+        .panel-drag-bar {
+            width: 40px;
+            height: 4px;
+            background-color: var(--border-color);
+            border-radius: 2px;
+        }
+        .panel-search {
+            display: flex;
+            align-items: center;
+            margin: 0 12px 12px;
+            padding: 8px 12px;
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            gap: 8px;
+        }
+        .panel-search-icon {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .panel-search input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+        }
+        .panel-search input::placeholder {
+            color: var(--text-muted);
+        }
+        .panel-search-emoji {
+            font-size: 16px;
+        }
+        .panel-tabs {
+            display: flex;
+            align-items: center;
+            padding: 0 12px 12px;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .panel-tab {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .panel-tab:hover {
+            background-color: var(--bg-tertiary);
+        }
+        .panel-tab.active {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        .panel-tab-all {
+            padding: 4px 8px;
+            width: auto;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+        }
+        .panel-tab-divider {
+            width: 1px;
+            height: 20px;
+            background-color: var(--border-color);
+            margin: 0 4px;
+        }
+        .panel-title-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px 8px;
             gap: 8px;
         }
         .panel-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
-            color: #333;
+            color: var(--text-primary);
         }
-        .type-badge {
-            background-color: #f5f5f5;
-            color: #666;
-            padding: 4px 8px;
-            border-radius: 8px;
+        .panel-title-arrow {
+            color: var(--text-muted);
             font-size: 12px;
+        }
+        .panel-type-badge {
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: auto;
         }
         .emoticon-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            padding: 16px;
+            gap: 4px;
+            padding: 8px 12px 16px;
             overflow-y: auto;
+            flex: 1;
         }
         .emoticon-item {
             aspect-ratio: 1;
-            background-color: #f9f9f9;
+            background-color: var(--bg-tertiary);
             border-radius: 12px;
             display: flex;
             flex-direction: column;
@@ -105,20 +389,23 @@ BEFORE_PREVIEW_TEMPLATE = """
             justify-content: center;
             padding: 8px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.15s;
         }
         .emoticon-item:hover {
-            background-color: #f0f0f0;
+            background-color: var(--border-color);
+            transform: scale(1.05);
+        }
+        .emoticon-item:active {
+            transform: scale(0.95);
         }
         .emoticon-number {
             font-size: 24px;
             font-weight: 700;
-            color: #fee500;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            color: var(--kakao-yellow);
         }
         .emoticon-desc {
-            font-size: 10px;
-            color: #999;
+            font-size: 9px;
+            color: var(--text-muted);
             text-align: center;
             margin-top: 4px;
             line-height: 1.2;
@@ -129,69 +416,435 @@ BEFORE_PREVIEW_TEMPLATE = """
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
         }
+        .selection-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .selection-overlay.active {
+            display: flex;
+        }
+        .selection-popup {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 40px 20px;
+        }
+        .selection-star {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .selection-star.filled {
+            color: var(--kakao-yellow);
+        }
+        .selection-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .selection-emoticon {
+            width: 150px;
+            height: 150px;
+            background-color: var(--bg-tertiary);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .selection-emoticon-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--kakao-yellow);
+        }
+        .selection-emoticon-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 8px;
+            padding: 0 12px;
+        }
+        .selection-send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--kakao-yellow);
+            color: var(--kakao-brown);
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s;
+        }
+        .selection-send-btn:hover {
+            transform: scale(1.1);
+        }
+        .selection-send-btn:active {
+            transform: scale(0.95);
+        }
+        .info-toggle {
+            padding: 8px 16px;
+            border-top: 1px solid var(--border-color);
+        }
+        .info-toggle-btn {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
         .info-section {
-            padding: 16px;
-            background-color: #f9f9f9;
-            border-top: 1px solid #f0f0f0;
+            padding: 12px 16px;
+            background-color: var(--bg-tertiary);
+            border-top: 1px solid var(--border-color);
+            display: none;
+        }
+        .info-section.open {
+            display: block;
         }
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
         }
         .info-label {
-            color: #666;
-            font-size: 14px;
+            color: var(--text-muted);
+            font-size: 12px;
         }
         .info-value {
-            color: #333;
-            font-size: 14px;
+            color: var(--text-primary);
+            font-size: 12px;
             font-weight: 500;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-title">{{ title }}</div>
-        <span class="badge">기획</span>
-    </div>
-    
-    <div class="chat-area"></div>
-    
-    <div class="emoticon-panel">
-        <div class="panel-header">
-            <span class="panel-title">{{ title }}</span>
-            <span class="type-badge">{{ emoticon_type_name }}</span>
+    <div class="chat-container" id="chatContainer">
+        <div class="header">
+            <div class="header-back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </div>
+            <div class="header-title">{{ title }}</div>
+            <div class="header-actions">
+                <span class="badge">기획</span>
+                <button class="mode-toggle" id="modeToggle" title="다크/라이트 모드 전환">
+                    🌙
+                </button>
+            </div>
         </div>
         
-        <div class="emoticon-grid">
-            {% for plan in plans %}
-            <div class="emoticon-item">
-                <span class="emoticon-number">{{ loop.index }}</span>
-                <span class="emoticon-desc">{{ plan.description }}</span>
+        <div class="chat-area" id="chatArea"></div>
+        
+        <div class="input-wrapper" id="inputWrapper">
+            <div class="input-bar">
+                <button class="input-btn" id="addBtn">+</button>
+                <div class="input-field-wrapper">
+                    <input type="text" class="input-field" id="messageInput" placeholder="메시지 입력">
+                    <button class="emoji-btn" id="emojiBtn">😊</button>
+                </div>
+                <button class="send-btn" id="sendBtn">#</button>
             </div>
-            {% endfor %}
         </div>
         
-        <div class="info-section">
-            <div class="info-row">
-                <span class="info-label">이모티콘 타입</span>
-                <span class="info-value">{{ emoticon_type_name }}</span>
+        <div class="emoticon-panel" id="emoticonPanel">
+            <div class="panel-drag-handle" id="dragHandle">
+                <div class="panel-drag-bar"></div>
             </div>
-            <div class="info-row">
-                <span class="info-label">총 개수</span>
-                <span class="info-value">{{ plans|length }} / {{ spec.count }}개</span>
+            
+            <div class="panel-search">
+                <span class="panel-search-icon">🔍</span>
+                <input type="text" placeholder="검색">
+                <span class="panel-search-emoji">😊</span>
             </div>
-            <div class="info-row">
-                <span class="info-label">파일 형식</span>
-                <span class="info-value">{{ spec.format }}</span>
+            
+            <div class="panel-tabs">
+                <button class="panel-tab">🕐</button>
+                <button class="panel-tab">⭐</button>
+                <div class="panel-tab-divider"></div>
+                <button class="panel-tab panel-tab-all">ALL</button>
+                <button class="panel-tab active" id="emoticonTabBtn">😊</button>
             </div>
-            <div class="info-row">
-                <span class="info-label">크기</span>
-                <span class="info-value">{{ spec.sizes[0][0] }} x {{ spec.sizes[0][1] }} px</span>
+            
+            <div class="panel-title-row">
+                <span class="panel-title">{{ title }}</span>
+                <span class="panel-title-arrow">›</span>
+                <span class="panel-type-badge">{{ emoticon_type_name }}</span>
+            </div>
+            
+            <div class="emoticon-grid" id="emoticonGrid">
+                {% for plan in plans %}
+                <div class="emoticon-item" data-index="{{ loop.index }}" data-desc="{{ plan.description }}">
+                    <span class="emoticon-number">{{ loop.index }}</span>
+                    <span class="emoticon-desc">{{ plan.description }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="info-toggle">
+                <button class="info-toggle-btn" id="infoToggleBtn">상세 정보 보기 ▼</button>
+            </div>
+            
+            <div class="info-section" id="infoSection">
+                <div class="info-row">
+                    <span class="info-label">이모티콘 타입</span>
+                    <span class="info-value">{{ emoticon_type_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">총 개수</span>
+                    <span class="info-value">{{ plans|length }} / {{ spec.count }}개</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">파일 형식</span>
+                    <span class="info-value">{{ spec.format }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">크기</span>
+                    <span class="info-value">{{ spec.sizes[0][0] }} x {{ spec.sizes[0][1] }} px</span>
+                </div>
             </div>
         </div>
     </div>
+    
+    <div class="selection-overlay" id="selectionOverlay">
+        <div class="selection-popup">
+            <button class="selection-star" id="selectionStar">☆</button>
+            <button class="selection-close" id="selectionClose">✕</button>
+            <div class="selection-emoticon" id="selectionEmoticon">
+                <span class="selection-emoticon-number" id="selectionNumber"></span>
+                <span class="selection-emoticon-desc" id="selectionDesc"></span>
+            </div>
+            <button class="selection-send-btn" id="selectionSendBtn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const chatArea = document.getElementById('chatArea');
+        const inputWrapper = document.getElementById('inputWrapper');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const emojiBtn = document.getElementById('emojiBtn');
+        const emoticonPanel = document.getElementById('emoticonPanel');
+        const dragHandle = document.getElementById('dragHandle');
+        const emoticonGrid = document.getElementById('emoticonGrid');
+        const selectionOverlay = document.getElementById('selectionOverlay');
+        const selectionNumber = document.getElementById('selectionNumber');
+        const selectionDesc = document.getElementById('selectionDesc');
+        const selectionStar = document.getElementById('selectionStar');
+        const selectionClose = document.getElementById('selectionClose');
+        const selectionSendBtn = document.getElementById('selectionSendBtn');
+        const modeToggle = document.getElementById('modeToggle');
+        const infoToggleBtn = document.getElementById('infoToggleBtn');
+        const infoSection = document.getElementById('infoSection');
+        
+        let isPanelOpen = false;
+        let selectedEmoticon = null;
+        let isStarred = false;
+        let isDragging = false;
+        let startY = 0;
+        let panelHeight = 0;
+        
+        // Send button state
+        messageInput.addEventListener('input', () => {
+            if (messageInput.value.trim()) {
+                sendBtn.classList.add('active');
+                sendBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
+            } else {
+                sendBtn.classList.remove('active');
+                sendBtn.textContent = '#';
+            }
+        });
+        
+        // Send message
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+            
+            addMessage(text, 'text');
+            messageInput.value = '';
+            sendBtn.classList.remove('active');
+            sendBtn.textContent = '#';
+        }
+        
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Add message to chat
+        function addMessage(content, type, desc = '') {
+            const message = document.createElement('div');
+            message.className = 'message';
+            
+            const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            
+            if (type === 'text') {
+                message.innerHTML = `
+                    <div class="message-bubble">${escapeHtml(content)}</div>
+                    <span class="message-time">${time}</span>
+                `;
+            } else if (type === 'emoticon') {
+                message.innerHTML = `
+                    <div class="message-bubble message-emoticon">
+                        <div class="message-emoticon-content">${content}</div>
+                        <div class="message-emoticon-label">${escapeHtml(desc)}</div>
+                    </div>
+                    <span class="message-time">${time}</span>
+                `;
+            }
+            
+            chatArea.appendChild(message);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Toggle emoticon panel
+        emojiBtn.addEventListener('click', () => {
+            isPanelOpen = !isPanelOpen;
+            emoticonPanel.classList.toggle('open', isPanelOpen);
+            emojiBtn.classList.toggle('active', isPanelOpen);
+            
+            if (!isPanelOpen) {
+                // Reset custom height when closing
+                emoticonPanel.style.maxHeight = '';
+            }
+        });
+        
+        // Emoticon selection
+        emoticonGrid.addEventListener('click', (e) => {
+            const item = e.target.closest('.emoticon-item');
+            if (!item) return;
+            
+            selectedEmoticon = {
+                index: item.dataset.index,
+                desc: item.dataset.desc
+            };
+            
+            selectionNumber.textContent = selectedEmoticon.index;
+            selectionDesc.textContent = selectedEmoticon.desc;
+            selectionOverlay.classList.add('active');
+            isStarred = false;
+            selectionStar.textContent = '☆';
+            selectionStar.classList.remove('filled');
+        });
+        
+        // Selection overlay controls
+        selectionClose.addEventListener('click', () => {
+            selectionOverlay.classList.remove('active');
+            selectedEmoticon = null;
+        });
+        
+        selectionStar.addEventListener('click', () => {
+            isStarred = !isStarred;
+            selectionStar.textContent = isStarred ? '★' : '☆';
+            selectionStar.classList.toggle('filled', isStarred);
+        });
+        
+        selectionSendBtn.addEventListener('click', () => {
+            if (selectedEmoticon) {
+                addMessage(`[${selectedEmoticon.index}]`, 'emoticon', selectedEmoticon.desc);
+                selectionOverlay.classList.remove('active');
+                selectedEmoticon = null;
+            }
+        });
+        
+        selectionOverlay.addEventListener('click', (e) => {
+            if (e.target === selectionOverlay) {
+                selectionOverlay.classList.remove('active');
+                selectedEmoticon = null;
+            }
+        });
+        
+        // Drag handle for panel resize
+        dragHandle.addEventListener('mousedown', startDrag);
+        dragHandle.addEventListener('touchstart', startDrag, { passive: false });
+        
+        function startDrag(e) {
+            isDragging = true;
+            startY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+            panelHeight = emoticonPanel.offsetHeight;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchmove', onDrag, { passive: false });
+            document.addEventListener('touchend', stopDrag);
+        }
+        
+        function onDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+            const delta = startY - clientY;
+            const newHeight = Math.min(Math.max(panelHeight + delta, 200), window.innerHeight * 0.8);
+            emoticonPanel.style.maxHeight = newHeight + 'px';
+        }
+        
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchmove', onDrag);
+            document.removeEventListener('touchend', stopDrag);
+        }
+        
+        // Mode toggle
+        modeToggle.addEventListener('click', () => {
+            chatContainer.classList.toggle('light-mode');
+            modeToggle.textContent = chatContainer.classList.contains('light-mode') ? '☀️' : '🌙';
+        });
+        
+        // Info toggle
+        infoToggleBtn.addEventListener('click', () => {
+            const isOpen = infoSection.classList.toggle('open');
+            infoToggleBtn.textContent = isOpen ? '상세 정보 닫기 ▲' : '상세 정보 보기 ▼';
+        });
+    </script>
 </body>
 </html>
 """
@@ -202,9 +855,35 @@ AFTER_PREVIEW_TEMPLATE = """
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ title }} - 이모티콘 프리뷰</title>
     <style>
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --bg-input: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #999999;
+            --text-muted: #666666;
+            --border-color: #333333;
+            --kakao-yellow: #fee500;
+            --kakao-brown: #3c1e1e;
+            --bubble-mine: #fee500;
+            --bubble-mine-text: #3c1e1e;
+        }
+        .light-mode {
+            --bg-primary: #b2c7d9;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f5f5f5;
+            --bg-input: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --border-color: #e5e5e5;
+            --bubble-mine: #fee500;
+            --bubble-mine-text: #3c1e1e;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -212,32 +891,73 @@ AFTER_PREVIEW_TEMPLATE = """
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #b2c7d9;
+            background-color: #000;
             min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            height: 100dvh;
+            background-color: var(--bg-primary);
             display: flex;
             flex-direction: column;
+            position: relative;
+            overflow: hidden;
         }
         .header {
-            background-color: #fff;
+            background-color: var(--bg-secondary);
             padding: 12px 16px;
             display: flex;
             align-items: center;
-            border-bottom: 1px solid #e5e5e5;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+        }
+        .header-back {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            cursor: pointer;
         }
         .header-title {
             font-size: 16px;
             font-weight: 600;
-            color: #333;
+            color: var(--text-primary);
             flex: 1;
             text-align: center;
         }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
         .badge {
-            background-color: #fee500;
-            color: #3c1e1e;
+            background-color: var(--kakao-yellow);
+            color: var(--kakao-brown);
             padding: 4px 8px;
             border-radius: 12px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
+        }
+        .mode-toggle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            font-size: 14px;
         }
         .chat-area {
             flex: 1;
@@ -245,182 +965,727 @@ AFTER_PREVIEW_TEMPLATE = """
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-        }
-        .download-section {
-            display: flex;
-            justify-content: center;
-            margin-top: auto;
-            margin-bottom: 8px;
-        }
-        .download-btn {
-            background-color: #fee500;
-            color: #3c1e1e;
-            padding: 12px 24px;
-            border-radius: 24px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: background-color 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .download-btn:hover {
-            background-color: #fdd835;
-        }
-        .emoticon-panel {
-            background-color: #fff;
-            border-radius: 16px;
-            margin-top: auto;
-            max-height: 60vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        .panel-header {
-            padding: 16px;
-            border-bottom: 1px solid #f0f0f0;
-            display: flex;
-            align-items: center;
             gap: 8px;
         }
-        .icon-preview {
+        .download-banner {
+            display: flex;
+            justify-content: center;
+            padding: 12px;
+        }
+        .download-btn {
+            background-color: var(--kakao-yellow);
+            color: var(--kakao-brown);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .download-btn:hover {
+            transform: scale(1.05);
+        }
+        .message {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            max-width: 80%;
+            margin-left: auto;
+        }
+        .message-bubble {
+            background-color: var(--bubble-mine);
+            color: var(--bubble-mine-text);
+            padding: 10px 14px;
+            border-radius: 16px 16px 4px 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .message-emoticon {
+            background: transparent;
+            padding: 4px;
+        }
+        .message-emoticon img {
+            max-width: 120px;
+            max-height: 120px;
+            object-fit: contain;
+        }
+        .message-time {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .input-wrapper {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            z-index: 100;
+        }
+        .input-bar {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            gap: 8px;
+        }
+        .input-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .input-btn:hover {
+            background-color: var(--border-color);
+        }
+        .input-field-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 0 4px 0 14px;
+            min-height: 40px;
+        }
+        .input-field {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            padding: 8px 0;
+        }
+        .input-field::placeholder {
+            color: var(--text-muted);
+        }
+        .emoji-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .emoji-btn:hover {
+            background-color: var(--bg-tertiary);
+        }
+        .emoji-btn.active {
+            color: var(--kakao-yellow);
+        }
+        .send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .send-btn.active {
+            background-color: var(--kakao-yellow);
+            color: var(--kakao-brown);
+        }
+        .emoticon-panel {
+            background-color: var(--bg-secondary);
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            flex-direction: column;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .emoticon-panel.open {
+            max-height: 60vh;
+        }
+        .panel-drag-handle {
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            cursor: grab;
+        }
+        .panel-drag-handle:active {
+            cursor: grabbing;
+        }
+        .panel-drag-bar {
             width: 40px;
-            height: 40px;
+            height: 4px;
+            background-color: var(--border-color);
+            border-radius: 2px;
+        }
+        .panel-search {
+            display: flex;
+            align-items: center;
+            margin: 0 12px 12px;
+            padding: 8px 12px;
+            background-color: var(--bg-tertiary);
             border-radius: 8px;
+            gap: 8px;
+        }
+        .panel-search-icon {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .panel-search input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+        }
+        .panel-search input::placeholder {
+            color: var(--text-muted);
+        }
+        .panel-search-emoji {
+            font-size: 16px;
+        }
+        .panel-tabs {
+            display: flex;
+            align-items: center;
+            padding: 0 12px 12px;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .panel-tab {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .panel-tab:hover {
+            background-color: var(--bg-tertiary);
+        }
+        .panel-tab.active {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        .panel-tab-all {
+            padding: 4px 8px;
+            width: auto;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+        }
+        .panel-tab-divider {
+            width: 1px;
+            height: 20px;
+            background-color: var(--border-color);
+            margin: 0 4px;
+        }
+        .panel-tab-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+        .panel-title-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px 8px;
+            gap: 8px;
+        }
+        .panel-icon-preview {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
             object-fit: cover;
         }
         .panel-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
-            color: #333;
+            color: var(--text-primary);
         }
-        .type-badge {
-            background-color: #f5f5f5;
-            color: #666;
-            padding: 4px 8px;
-            border-radius: 8px;
+        .panel-title-arrow {
+            color: var(--text-muted);
             font-size: 12px;
+        }
+        .panel-type-badge {
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: auto;
         }
         .emoticon-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            padding: 16px;
+            gap: 4px;
+            padding: 8px 12px 16px;
             overflow-y: auto;
+            flex: 1;
         }
         .emoticon-item {
             aspect-ratio: 1;
-            background-color: #f9f9f9;
+            background-color: var(--bg-tertiary);
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 8px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.15s;
         }
         .emoticon-item:hover {
-            background-color: #f0f0f0;
+            background-color: var(--border-color);
+            transform: scale(1.05);
+        }
+        .emoticon-item:active {
+            transform: scale(0.95);
         }
         .emoticon-item img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
         }
+        .selection-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .selection-overlay.active {
+            display: flex;
+        }
+        .selection-popup {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 40px 20px;
+        }
+        .selection-star {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .selection-star.filled {
+            color: var(--kakao-yellow);
+        }
+        .selection-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .selection-emoticon {
+            width: 150px;
+            height: 150px;
+            background-color: var(--bg-tertiary);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            padding: 12px;
+        }
+        .selection-emoticon img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .selection-send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--kakao-yellow);
+            color: var(--kakao-brown);
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s;
+        }
+        .selection-send-btn:hover {
+            transform: scale(1.1);
+        }
+        .selection-send-btn:active {
+            transform: scale(0.95);
+        }
+        .info-toggle {
+            padding: 8px 16px;
+            border-top: 1px solid var(--border-color);
+        }
+        .info-toggle-btn {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
         .info-section {
-            padding: 16px;
-            background-color: #f9f9f9;
-            border-top: 1px solid #f0f0f0;
+            padding: 12px 16px;
+            background-color: var(--bg-tertiary);
+            border-top: 1px solid var(--border-color);
+            display: none;
+        }
+        .info-section.open {
+            display: block;
         }
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
         }
         .info-label {
-            color: #666;
-            font-size: 14px;
+            color: var(--text-muted);
+            font-size: 12px;
         }
         .info-value {
-            color: #333;
-            font-size: 14px;
+            color: var(--text-primary);
+            font-size: 12px;
             font-weight: 500;
-        }
-        .preview-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.8);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .preview-modal.active {
-            display: flex;
-        }
-        .preview-modal img {
-            max-width: 90%;
-            max-height: 90%;
-            border-radius: 16px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-title">{{ title }}</div>
-        <span class="badge">완성</span>
-    </div>
-    
-    <div class="chat-area">
-        <div class="download-section">
-            <a href="{{ download_url }}" class="download-btn" download>ZIP 다운로드</a>
-        </div>
-    </div>
-    
-    <div class="emoticon-panel">
-        <div class="panel-header">
-            {% if icon %}
-            <img src="{{ icon }}" alt="아이콘" class="icon-preview">
-            {% endif %}
-            <span class="panel-title">{{ title }}</span>
-            <span class="type-badge">{{ emoticon_type_name }}</span>
+    <div class="chat-container" id="chatContainer">
+        <div class="header">
+            <div class="header-back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </div>
+            <div class="header-title">{{ title }}</div>
+            <div class="header-actions">
+                <span class="badge">완성</span>
+                <button class="mode-toggle" id="modeToggle" title="다크/라이트 모드 전환">
+                    🌙
+                </button>
+            </div>
         </div>
         
-        <div class="emoticon-grid">
-            {% for emoticon in emoticons %}
-            <div class="emoticon-item" onclick="showPreview('{{ emoticon.image_data }}')">
-                <img src="{{ emoticon.image_data }}" alt="이모티콘 {{ loop.index }}">
+        <div class="chat-area" id="chatArea">
+            <div class="download-banner">
+                <a href="{{ download_url }}" class="download-btn" download>ZIP 다운로드</a>
             </div>
-            {% endfor %}
         </div>
         
-        <div class="info-section">
-            <div class="info-row">
-                <span class="info-label">이모티콘 타입</span>
-                <span class="info-value">{{ emoticon_type_name }}</span>
+        <div class="input-wrapper" id="inputWrapper">
+            <div class="input-bar">
+                <button class="input-btn" id="addBtn">+</button>
+                <div class="input-field-wrapper">
+                    <input type="text" class="input-field" id="messageInput" placeholder="메시지 입력">
+                    <button class="emoji-btn" id="emojiBtn">😊</button>
+                </div>
+                <button class="send-btn" id="sendBtn">#</button>
             </div>
-            <div class="info-row">
-                <span class="info-label">총 개수</span>
-                <span class="info-value">{{ emoticons|length }}개</span>
+        </div>
+        
+        <div class="emoticon-panel" id="emoticonPanel">
+            <div class="panel-drag-handle" id="dragHandle">
+                <div class="panel-drag-bar"></div>
+            </div>
+            
+            <div class="panel-search">
+                <span class="panel-search-icon">🔍</span>
+                <input type="text" placeholder="검색">
+                <span class="panel-search-emoji">😊</span>
+            </div>
+            
+            <div class="panel-tabs">
+                <button class="panel-tab">🕐</button>
+                <button class="panel-tab">⭐</button>
+                <div class="panel-tab-divider"></div>
+                <button class="panel-tab panel-tab-all">ALL</button>
+                {% if icon %}
+                <button class="panel-tab active" id="emoticonTabBtn">
+                    <img src="{{ icon }}" alt="" class="panel-tab-icon">
+                </button>
+                {% else %}
+                <button class="panel-tab active" id="emoticonTabBtn">😊</button>
+                {% endif %}
+            </div>
+            
+            <div class="panel-title-row">
+                {% if icon %}
+                <img src="{{ icon }}" alt="" class="panel-icon-preview">
+                {% endif %}
+                <span class="panel-title">{{ title }}</span>
+                <span class="panel-title-arrow">›</span>
+                <span class="panel-type-badge">{{ emoticon_type_name }}</span>
+            </div>
+            
+            <div class="emoticon-grid" id="emoticonGrid">
+                {% for emoticon in emoticons %}
+                <div class="emoticon-item" data-index="{{ loop.index }}" data-src="{{ emoticon.image_data }}">
+                    <img src="{{ emoticon.image_data }}" alt="이모티콘 {{ loop.index }}">
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="info-toggle">
+                <button class="info-toggle-btn" id="infoToggleBtn">상세 정보 보기 ▼</button>
+            </div>
+            
+            <div class="info-section" id="infoSection">
+                <div class="info-row">
+                    <span class="info-label">이모티콘 타입</span>
+                    <span class="info-value">{{ emoticon_type_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">총 개수</span>
+                    <span class="info-value">{{ emoticons|length }}개</span>
+                </div>
             </div>
         </div>
     </div>
     
-    <div class="preview-modal" id="previewModal" onclick="hidePreview()">
-        <img src="" alt="프리뷰" id="previewImage">
+    <div class="selection-overlay" id="selectionOverlay">
+        <div class="selection-popup">
+            <button class="selection-star" id="selectionStar">☆</button>
+            <button class="selection-close" id="selectionClose">✕</button>
+            <div class="selection-emoticon" id="selectionEmoticon">
+                <img src="" alt="" id="selectionImage">
+            </div>
+            <button class="selection-send-btn" id="selectionSendBtn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </div>
     </div>
     
     <script>
-        function showPreview(src) {
-            document.getElementById('previewImage').src = src;
-            document.getElementById('previewModal').classList.add('active');
+        const chatContainer = document.getElementById('chatContainer');
+        const chatArea = document.getElementById('chatArea');
+        const inputWrapper = document.getElementById('inputWrapper');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const emojiBtn = document.getElementById('emojiBtn');
+        const emoticonPanel = document.getElementById('emoticonPanel');
+        const dragHandle = document.getElementById('dragHandle');
+        const emoticonGrid = document.getElementById('emoticonGrid');
+        const selectionOverlay = document.getElementById('selectionOverlay');
+        const selectionImage = document.getElementById('selectionImage');
+        const selectionStar = document.getElementById('selectionStar');
+        const selectionClose = document.getElementById('selectionClose');
+        const selectionSendBtn = document.getElementById('selectionSendBtn');
+        const modeToggle = document.getElementById('modeToggle');
+        const infoToggleBtn = document.getElementById('infoToggleBtn');
+        const infoSection = document.getElementById('infoSection');
+        
+        let isPanelOpen = false;
+        let selectedEmoticon = null;
+        let isStarred = false;
+        let isDragging = false;
+        let startY = 0;
+        let panelHeight = 0;
+        
+        // Send button state
+        messageInput.addEventListener('input', () => {
+            if (messageInput.value.trim()) {
+                sendBtn.classList.add('active');
+                sendBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
+            } else {
+                sendBtn.classList.remove('active');
+                sendBtn.textContent = '#';
+            }
+        });
+        
+        // Send message
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+            
+            addMessage(text, 'text');
+            messageInput.value = '';
+            sendBtn.classList.remove('active');
+            sendBtn.textContent = '#';
         }
-        function hidePreview() {
-            document.getElementById('previewModal').classList.remove('active');
+        
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Add message to chat
+        function addMessage(content, type, imageSrc = '') {
+            const message = document.createElement('div');
+            message.className = 'message';
+            
+            const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            
+            if (type === 'text') {
+                message.innerHTML = `
+                    <div class="message-bubble">${escapeHtml(content)}</div>
+                    <span class="message-time">${time}</span>
+                `;
+            } else if (type === 'emoticon') {
+                message.innerHTML = `
+                    <div class="message-bubble message-emoticon">
+                        <img src="${imageSrc}" alt="이모티콘">
+                    </div>
+                    <span class="message-time">${time}</span>
+                `;
+            }
+            
+            chatArea.appendChild(message);
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Toggle emoticon panel
+        emojiBtn.addEventListener('click', () => {
+            isPanelOpen = !isPanelOpen;
+            emoticonPanel.classList.toggle('open', isPanelOpen);
+            emojiBtn.classList.toggle('active', isPanelOpen);
+            
+            if (!isPanelOpen) {
+                // Reset custom height when closing
+                emoticonPanel.style.maxHeight = '';
+            }
+        });
+        
+        // Emoticon selection
+        emoticonGrid.addEventListener('click', (e) => {
+            const item = e.target.closest('.emoticon-item');
+            if (!item) return;
+            
+            selectedEmoticon = {
+                index: item.dataset.index,
+                src: item.dataset.src
+            };
+            
+            selectionImage.src = selectedEmoticon.src;
+            selectionOverlay.classList.add('active');
+            isStarred = false;
+            selectionStar.textContent = '☆';
+            selectionStar.classList.remove('filled');
+        });
+        
+        // Selection overlay controls
+        selectionClose.addEventListener('click', () => {
+            selectionOverlay.classList.remove('active');
+            selectedEmoticon = null;
+        });
+        
+        selectionStar.addEventListener('click', () => {
+            isStarred = !isStarred;
+            selectionStar.textContent = isStarred ? '★' : '☆';
+            selectionStar.classList.toggle('filled', isStarred);
+        });
+        
+        selectionSendBtn.addEventListener('click', () => {
+            if (selectedEmoticon) {
+                addMessage('', 'emoticon', selectedEmoticon.src);
+                selectionOverlay.classList.remove('active');
+                selectedEmoticon = null;
+            }
+        });
+        
+        selectionOverlay.addEventListener('click', (e) => {
+            if (e.target === selectionOverlay) {
+                selectionOverlay.classList.remove('active');
+                selectedEmoticon = null;
+            }
+        });
+        
+        // Drag handle for panel resize
+        dragHandle.addEventListener('mousedown', startDrag);
+        dragHandle.addEventListener('touchstart', startDrag, { passive: false });
+        
+        function startDrag(e) {
+            isDragging = true;
+            startY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+            panelHeight = emoticonPanel.offsetHeight;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchmove', onDrag, { passive: false });
+            document.addEventListener('touchend', stopDrag);
+        }
+        
+        function onDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+            const delta = startY - clientY;
+            const newHeight = Math.min(Math.max(panelHeight + delta, 200), window.innerHeight * 0.8);
+            emoticonPanel.style.maxHeight = newHeight + 'px';
+        }
+        
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchmove', onDrag);
+            document.removeEventListener('touchend', stopDrag);
+        }
+        
+        // Mode toggle
+        modeToggle.addEventListener('click', () => {
+            chatContainer.classList.toggle('light-mode');
+            modeToggle.textContent = chatContainer.classList.contains('light-mode') ? '☀️' : '🌙';
+        });
+        
+        // Info toggle
+        infoToggleBtn.addEventListener('click', () => {
+            const isOpen = infoSection.classList.toggle('open');
+            infoToggleBtn.textContent = isOpen ? '상세 정보 닫기 ▲' : '상세 정보 보기 ▼';
+        });
     </script>
 </body>
 </html>
