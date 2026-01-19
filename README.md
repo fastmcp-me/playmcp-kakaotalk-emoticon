@@ -1,3 +1,10 @@
+[![Add to Cursor](https://fastmcp.me/badges/cursor_dark.svg)](https://fastmcp.me/MCP/Details/1680/kakaotalk-emoticons)
+[![Add to VS Code](https://fastmcp.me/badges/vscode_dark.svg)](https://fastmcp.me/MCP/Details/1680/kakaotalk-emoticons)
+[![Add to Claude](https://fastmcp.me/badges/claude_dark.svg)](https://fastmcp.me/MCP/Details/1680/kakaotalk-emoticons)
+[![Add to ChatGPT](https://fastmcp.me/badges/chatgpt_dark.svg)](https://fastmcp.me/MCP/Details/1680/kakaotalk-emoticons)
+[![Add to Codex](https://fastmcp.me/badges/codex_dark.svg)](https://fastmcp.me/MCP/Details/1680/kakaotalk-emoticons)
+[![Add to Gemini](https://fastmcp.me/badges/gemini_dark.svg)](https://fastmcp.me/MCP/Details/1680/kakaotalk-emoticons)
+
 # 카카오 이모티콘 PlayMCP 서버
 
 카카오톡 이모티콘 제작을 자동화하거나 제작에 도움을 주기 위한 MCP (Model Context Protocol) 서버입니다.
